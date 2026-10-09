@@ -1,0 +1,22 @@
+# dependencies and the local npm cache (see README — the global cache has a
+# permissions problem on the machine this was built on)
+node_modules/
+.npmcache/
+
+# build output — the site is built by .github/workflows/deploy.yml
+dist/
+
+# local environment and secrets; the tldraw license key belongs in a GitHub
+# Actions secret, never in the repo
+.env
+.env.*
+!.env.example
+
+# editor / OS noise
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# local tooling config for the Claude preview pane
+.claude/

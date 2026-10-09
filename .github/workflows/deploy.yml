@@ -1,0 +1,84 @@
+name: Deploy to GitHub Pages
+
+# This site is a tldraw app, and tldraw's license allows free use only in a
+# "Development Environment" — internal hosting that is not accessible to end
+# users, customers or the public. A public GitHub Pages site is a Production
+# Environment, which needs a trial or commercial license key; without one,
+# tldraw hides the editor five seconds after the page loads.
+#
+# So this workflow always builds — that proves the project still compiles on a
+# clean machine — but it only publishes when the repository has a
+# TLDRAW_LICENSE_KEY secret. Add the secret and re-run it (Actions → this
+# workflow → Run workflow) to put the site live.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push waits rather than cancelling one that
+# is half-way through publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      licensed: ${{ steps.license.outputs.licensed }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Node 22 satisfies every engine range in the dependency tree; the
+      # strictest are tldraw (>=22.12.0) and nanoid (^22 || ^24 || >=26).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # Supplies base_path ("/kane-tldraw" for a project site, "" for a user
+      # site or a custom domain), so the asset URLs follow wherever Pages
+      # serves the site from.
+      - id: pages
+        uses: actions/configure-pages@v6
+
+      - run: npm ci
+
+      - id: license
+        env:
+          TLDRAW_LICENSE_KEY: ${{ secrets.TLDRAW_LICENSE_KEY }}
+        run: |
+          if [ -n "$TLDRAW_LICENSE_KEY" ]; then
+            echo "licensed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "licensed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Not published::No TLDRAW_LICENSE_KEY secret is set, so this run only checks that the site builds. A public deployment needs a tldraw license — see the README."
+          fi
+
+      - name: Build
+        env:
+          VITE_TLDRAW_LICENSE_KEY: ${{ secrets.TLDRAW_LICENSE_KEY }}
+        run: npm run build -- --base="${{ steps.pages.outputs.base_path }}/"
+
+      # Only a licensed build is ever handed to Pages.
+      - if: steps.license.outputs.licensed == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.licensed == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
