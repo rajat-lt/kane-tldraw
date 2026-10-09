@@ -41,6 +41,20 @@ To put the site live:
 The key reaches tldraw as `VITE_TLDRAW_LICENSE_KEY` at build time (see the
 `licenseKey` prop in `src/App.tsx`). It never belongs in the repo itself.
 
+## Why `package.json` overrides katex
+
+Every KaTeX before 0.18.2 is affected by
+[GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7), and
+every package here that uses it — mermaid, `@streamdown/math`, `rehype-katex`,
+`micromark-extension-math` — still pins `^0.16.x`, even in its latest release.
+So `overrides` forces `katex` to `^0.18.2`. Remove it once those packages
+accept 0.18.
+
+Two things it can't reach. Mermaid bundles its own copy of KaTeX (0.16.45)
+inside its build, so that copy stays until mermaid ships a fixed one. And 0.18
+renamed KaTeX's CSS classes, so if the KaTeX stylesheet is ever imported, it
+has to come from this same `katex` package.
+
 ## What's here (mapped to the instructions)
 
 1. **tldraw foundation** — real tldraw editor: selection, marquee, undo/redo,
