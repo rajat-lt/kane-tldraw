@@ -8,7 +8,7 @@ import {
 import { NodeShape } from '../nodes/NodeShapeUtil'
 import { executeNode } from '../nodes/nodeTypes'
 import { ExecutionResult, PipelineValue, STOP_EXECUTION } from '../nodes/types/shared'
-import { whenResumed } from './runControl'
+import { runPaused, whenResumed } from './runControl'
 
 interface PendingExecutionGraphNode {
 	readonly state: 'waiting' | 'executing'
@@ -59,6 +59,29 @@ export class ExecutionGraph {
 	}
 
 	private state: 'waiting' | 'executing' | 'stopped' = 'waiting'
+	/** Stopped from outside, rather than running out of steps. */
+	private interrupted = false
+	/** Held at a pause at least once, so its wall-clock time overstates the run. */
+	private held = false
+
+	/** Whether the run went through to the end of its steps without being stopped. */
+	get finished() {
+		return !this.interrupted
+	}
+
+	/** Whether the run sat paused at some point. */
+	get wasHeld() {
+		return this.held
+	}
+
+	/** How many cards ran to completion. */
+	getExecutedCount() {
+		let count = 0
+		for (const node of this.nodesById.values()) {
+			if (node.state === 'executed') count++
+		}
+		return count
+	}
 
 	async execute() {
 		if (this.state !== 'waiting') {
@@ -79,6 +102,7 @@ export class ExecutionGraph {
 	}
 
 	stop() {
+		this.interrupted = true
 		this.state = 'stopped'
 	}
 
@@ -135,6 +159,7 @@ export class ExecutionGraph {
 		// A paused run finishes nothing new. Held here rather than at the end of
 		// the previous step so the card that is about to start is still marked
 		// waiting while the run sits paused.
+		if (runPaused.get()) this.held = true
 		await whenResumed()
 		if (this.state !== 'executing') return
 

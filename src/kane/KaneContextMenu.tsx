@@ -5,6 +5,7 @@ import {
 	EditMenuSubmenu,
 	ReorderMenuSubmenu,
 	SelectAllMenuItem,
+	TldrawUiMenuCheckboxItem,
 	TldrawUiMenuGroup,
 	TldrawUiMenuItem,
 	TLFrameShape,
@@ -218,10 +219,11 @@ function TypeSpecificItems({ shape, kind }: { shape: NodeShape; kind: string }) 
 			return (
 				<TldrawUiMenuGroup id="kane-click">
 					{(['single', 'double', 'multiple', 'right', 'hold'] as const).map((clickType) => (
-						<TldrawUiMenuItem
+						<TldrawUiMenuCheckboxItem
 							key={clickType}
 							id={`click-${clickType}`}
-							label={`${clickType[0].toUpperCase()}${clickType.slice(1)} click${node.clickType === clickType ? ' ✓' : ''}`}
+							label={`${clickType[0].toUpperCase()}${clickType.slice(1)} click`}
+							checked={node.clickType === clickType}
 							onSelect={() =>
 								updateNode<ClickNode>(editor, shape, (n) => ({ ...n, clickType }))
 							}

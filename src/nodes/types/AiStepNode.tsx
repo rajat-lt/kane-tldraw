@@ -138,7 +138,7 @@ export class AiStepNodeDefinition extends NodeDefinition<AiStepNode> {
 			target: element,
 			thought:
 				`Resolved “${element || 'the element'}” from the stored locator and confirmed it was still on the page. ` +
-				`Carried out the instruction — ${prompt || 'no prompt was given'} — and checked the page settled afterwards.`,
+				`Carried out the instruction (${prompt || 'no prompt was given'}) and checked the page settled afterwards.`,
 		})
 		return { output: null, locator: node.xpath }
 	}

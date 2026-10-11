@@ -117,5 +117,5 @@ export function summarizeChanges(editor: Editor, before: CanvasSnapshot): string
 		clauses.length === 1
 			? clauses[0]
 			: `${clauses.slice(0, -1).join(', ')} and ${clauses[clauses.length - 1]}`
-	return `${sentence} — ${now.size} step${now.size === 1 ? '' : 's'} in the flow`
+	return `${sentence} (${now.size} step${now.size === 1 ? '' : 's'} in the flow)`
 }

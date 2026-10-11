@@ -113,7 +113,7 @@ export function installWorkflowRules(editor: Editor) {
 				})
 				if (toDelete.length > 0) {
 					editor.deleteShapes(toDelete)
-					kaneToast('Only one workflow is allowed — connect to the existing workflow instead', 'error')
+					kaneToast('Only one workflow is allowed. Connect to the existing workflow instead.', 'error')
 				}
 			}
 		}

@@ -51,3 +51,25 @@ export const finderState = new EditorAtom<{ open: boolean }>('finder', () => ({ 
 export function kaneToast(message: string, tone: 'success' | 'info' | 'error' = 'info') {
 	window.dispatchEvent(new CustomEvent('kane-toast', { detail: { msg: message, tone } }))
 }
+
+/** What a run that went through to its end actually did. */
+export interface RunSummary {
+	/** Cards that ran to completion. */
+	steps: number
+	/** Wall-clock time, left out when the run sat paused (it would overstate it). */
+	ms?: number
+}
+
+function formatRunTime(ms: number) {
+	const s = ms / 1000
+	if (s < 10) return `${s.toFixed(1)}s`
+	if (s < 60) return `${Math.round(s)}s`
+	return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`
+}
+
+/** Report a finished run: the toast that carries the run tray (see RunTray). */
+export function kaneRunToast(run: RunSummary) {
+	const steps = `${run.steps} step${run.steps === 1 ? '' : 's'} passed`
+	const msg = run.ms === undefined ? steps : `${steps} in ${formatRunTime(run.ms)}`
+	window.dispatchEvent(new CustomEvent('kane-toast', { detail: { msg, tone: 'success', run } }))
+}

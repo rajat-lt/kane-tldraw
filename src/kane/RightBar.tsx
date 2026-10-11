@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { RIGHTBAR_BOTTOM, RIGHTBAR_TOP } from './catalog'
 import { CodegenIndicator } from './CodePanel'
 import { Credits } from './Credits'
 import { useKaneApp } from './KaneAppContext'
+import { useTipOpen } from './Tooltip'
 
 /**
  * Right bar (52px) — carried over from the previous Kane build: two icon
@@ -11,7 +11,8 @@ import { useKaneApp } from './KaneAppContext'
 
 function RBButton({ item }: { item: (typeof RIGHTBAR_TOP)[number] }) {
 	const { drawerId, openDrawer, pushToast, codegen } = useKaneApp()
-	const [hover, setHover] = useState(false)
+	// the same wait, and the same instant neighbours, as every other tip
+	const tip = useTipOpen()
 	const Icon = item.icon
 	const active = drawerId === item.id
 	// Generation keeps running with the drawer closed, so the button reports it:
@@ -19,16 +20,12 @@ function RBButton({ item }: { item: (typeof RIGHTBAR_TOP)[number] }) {
 	const generating = item.id === 'code' && codegen.status === 'generating'
 	const showRing = generating && drawerId !== 'code'
 	return (
-		<div
-			style={{ position: 'relative' }}
-			onMouseEnter={() => setHover(true)}
-			onMouseLeave={() => setHover(false)}
-		>
+		<div className="rb-btn-wrap" {...tip.triggerProps}>
 			<button
 				className={`icon-btn ${active ? 'is-active' : ''} ${generating ? 'is-busy' : ''}`}
 				aria-label={
 					generating
-						? `${item.label} — generating, ${Math.round(codegen.progress * 100)}%`
+						? `${item.label}: generating, ${Math.round(codegen.progress * 100)}%`
 						: item.label
 				}
 				onClick={() => {
@@ -42,8 +39,8 @@ function RBButton({ item }: { item: (typeof RIGHTBAR_TOP)[number] }) {
 			>
 				{showRing ? <CodegenIndicator progress={codegen.progress} /> : <Icon size={19} />}
 			</button>
-			{hover && (
-				<span className="tooltip left">
+			{tip.open && (
+				<span className="tooltip left" data-instant={tip.instant || undefined}>
 					{generating ? `Generating code… ${Math.round(codegen.progress * 100)}%` : item.label}
 				</span>
 			)}

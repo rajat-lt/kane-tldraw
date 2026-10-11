@@ -13,7 +13,7 @@ import {
 	X,
 } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Box, useValue } from 'tldraw'
 import {
@@ -31,6 +31,7 @@ import {
 	stopExecution,
 } from '../execution/executionState'
 import { runPaused } from '../execution/runControl'
+import { EASE_OUT } from '../lib/motion'
 import { getNodePortConnections } from '../nodes/nodePorts'
 import { NodeShape } from '../nodes/NodeShapeUtil'
 import { CURRENT_USER, useKaneApp } from './KaneAppContext'
@@ -115,10 +116,10 @@ function CanvasStats() {
 					<NumberFlow value={stats.runnable} respectMotionPreference />
 				</span>
 			</Tip>
-			<Tip label="Incomplete cards (missing target or URL) — click to reveal" wrap>
+			<Tip label="Incomplete cards (missing a target or URL). Click to reveal them." wrap>
 				<button
 					className={`stat-chip stat-chip_button ${stats.error > 0 ? 'stat-chip_error' : ''}`}
-					aria-label="Incomplete cards — click to reveal"
+					aria-label="Reveal incomplete cards"
 					onClick={revealErrors}
 				>
 					<AlertTriangle size={12} />
@@ -203,12 +204,12 @@ function SaveButton() {
 	const commit = () => {
 		if (!message.trim()) return
 		saveVersion(message)
-		pushToast(`Saved v${testCase.version + 1} — “${message.trim()}”`, 'success')
+		pushToast(`Saved v${testCase.version + 1}: “${message.trim()}”`, 'success')
 		close()
 	}
 
 	return (
-		<div style={{ position: 'relative' }} ref={anchorRef}>
+		<div className="popover-anchor" ref={anchorRef}>
 			<Tip label={unsaved ? 'Save a new version' : 'No changes since the last version'} wrap>
 				<button
 					className="btn btn-secondary"
@@ -225,9 +226,8 @@ function SaveButton() {
 					className="popover save-popover"
 					role="dialog"
 					aria-label="Save a new version"
-					style={{ top: 'calc(var(--topbar-h) - 6px)', right: 0 }}
 				>
-					<span className="popover-caret" style={{ top: -6, right: 26 }} />
+					<span className="popover-caret" />
 					<div className="save-head">
 						<strong>Save a new version</strong>
 						<span className="save-bump">
@@ -281,7 +281,7 @@ function ShareButton() {
 	const link = `https://app.lambdatest.com/kane/test-cases/${testCase.id}`
 
 	return (
-		<div style={{ position: 'relative' }} ref={anchorRef}>
+		<div className="popover-anchor" ref={anchorRef}>
 			<Tip label="Share this test case">
 				<button
 					className={`icon-btn ${open ? 'is-active' : ''}`}
@@ -296,9 +296,8 @@ function ShareButton() {
 					className="popover share-popover"
 					role="dialog"
 					aria-label="Share"
-					style={{ top: 'calc(var(--topbar-h) - 6px)', right: 0 }}
 				>
-					<span className="popover-caret" style={{ top: -6, right: 14 }} />
+					<span className="popover-caret" />
 					<div className="share-head">Anyone in your org with the link can view</div>
 					<div className="share-row">
 						<input className="share-link" value={link} readOnly onFocus={(e) => e.target.select()} />
@@ -309,7 +308,7 @@ function ShareButton() {
 									await navigator.clipboard.writeText(link)
 									pushToast('Link copied', 'success')
 								} catch {
-									pushToast('Could not reach the clipboard — select and copy', 'error')
+									pushToast('Couldn’t reach the clipboard. Select the link and copy it.', 'error')
 								}
 							}}
 						>
@@ -343,8 +342,14 @@ const RUN_MODE_LABELS: Record<RunMode, string> = {
 	paused: 'Resume',
 }
 
+/** The incoming label rises out of a blur into place; the outgoing one leaves upward. */
+const LABEL_BELOW = { opacity: 0, transform: 'translateY(9px)', filter: 'blur(4px)' }
+const LABEL_IN_PLACE = { opacity: 1, transform: 'translateY(0px)', filter: 'blur(0px)' }
+const LABEL_ABOVE = { opacity: 0, transform: 'translateY(-9px)', filter: 'blur(4px)' }
+
 function RunStepsButton() {
 	const { editor } = useKaneApp()
+	const reduceMotion = useReducedMotion()
 	const running = useValue(
 		'is running',
 		() => (editor ? executionState.get(editor).runningGraph !== null : false),
@@ -381,13 +386,20 @@ function RunStepsButton() {
 							? 'Carry on from where the run stopped'
 							: target
 								? 'Run the workflow from the card holding the Run label'
-								: 'Connect some cards first — the Run label marks where a run starts'
+								: 'Connect some cards first. The Run label marks where a run starts.'
 				}
 			>
 				<motion.button
-					layout
-					transition={{ type: 'spring', stiffness: 520, damping: 38, mass: 0.7 }}
-					className="btn btn-primary"
+					layout={!reduceMotion}
+					// The press is Motion's own `scale`, not the CSS press: Motion
+					// measures this button for the width spring and knows to set its
+					// own transforms aside when it does.
+					whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+					transition={{
+						layout: { type: 'spring', stiffness: 520, damping: 38, mass: 0.7 },
+						scale: { duration: 0.16, ease: EASE_OUT },
+					}}
+					className="btn btn-primary run-steps"
 					disabled={mode === 'idle' && !target}
 					onClick={() => {
 						if (!editor) return
@@ -404,10 +416,14 @@ function RunStepsButton() {
 							<motion.span
 								key={mode}
 								className="run-morph-item"
-								initial={{ opacity: 0, y: 9, filter: 'blur(4px)' }}
-								animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-								exit={{ opacity: 0, y: -9, filter: 'blur(4px)' }}
-								transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+								// Full transform strings: Motion hands those to the
+								// compositor, where `y` would run on the main thread — which
+								// is busy, at the moment a run starts. Reduced motion keeps
+								// the crossfade and drops the travel.
+								initial={reduceMotion ? { opacity: 0 } : LABEL_BELOW}
+								animate={reduceMotion ? { opacity: 1 } : LABEL_IN_PLACE}
+								exit={reduceMotion ? { opacity: 0 } : LABEL_ABOVE}
+								transition={{ duration: 0.22, ease: EASE_OUT }}
 							>
 								{mode === 'running' ? (
 									<Pause size={13} fill="currentColor" />
@@ -558,9 +574,8 @@ function InfoPopover({
 			className="popover info-popover"
 			role="dialog"
 			aria-label="File info"
-			style={{ top: 'calc(var(--topbar-h) - 6px)', left: 0 }}
 		>
-			<span className="popover-caret" style={{ top: -6, left: 20 }} />
+			<span className="popover-caret" />
 			<button className="icon-btn popover-close" onClick={onClose} aria-label="Close">
 				<X size={14} />
 			</button>
@@ -614,7 +629,6 @@ function AvatarMenu({
 			ref={ref}
 			className="popover menu"
 			role="menu"
-			style={{ top: 'calc(var(--topbar-h) - 6px)', right: 0 }}
 		>
 			<button className="menu-item" role="menuitem">
 				Account settings
@@ -674,7 +688,7 @@ export function Topbar() {
 						}}
 					/>
 				) : (
-					<Tip label={`${name} — click to rename`} wrap>
+					<Tip label={`${name} (click to rename)`} wrap>
 						<span className="filename" onClick={() => setEditing(true)}>
 							{name}
 						</span>
@@ -691,7 +705,7 @@ export function Topbar() {
 				</span>
 			</Tip>
 
-			<div style={{ position: 'relative' }}>
+			<div className="popover-anchor">
 				<Tip label="Test case details">
 					<button
 						ref={infoRef}
@@ -730,12 +744,12 @@ export function Topbar() {
 			<RunStepsButton />
 			<SaveButton />
 
-			<div style={{ position: 'relative' }}>
-				<Tip label={`Account — ${CURRENT_USER.name}`} side="left" wrap>
+			<div className="popover-anchor">
+				<Tip label={`Signed in as ${CURRENT_USER.name}`} side="left" wrap>
 					<button
 						ref={avatarRef}
 						className="avatar"
-						aria-label={`Account menu — ${CURRENT_USER.name}`}
+						aria-label={`Account menu for ${CURRENT_USER.name}`}
 						onClick={() => {
 							setMenuOpen((v) => !v)
 							setInfoOpen(false)

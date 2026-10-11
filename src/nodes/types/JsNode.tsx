@@ -120,7 +120,7 @@ export class JsNodeDefinition extends NodeDefinition<JsNode> {
 			view: kaneRuntime.currentView,
 			thought:
 				`Evaluated ${code.split('\n').length} line${code.split('\n').length === 1 ? '' : 's'} in the page and took what it returned. ` +
-				'Nothing was clicked or typed — the snippet only read and reported.',
+				'Nothing was clicked or typed: the snippet only read and reported.',
 		})
 		return { output: null, result }
 	}

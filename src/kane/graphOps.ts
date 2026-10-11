@@ -186,7 +186,7 @@ export function connectCards(
 	return connectionId
 }
 
-const FRAME_PADDING = 40
+export const FRAME_PADDING = 40
 const FRAME_TOP_PADDING = 56
 
 /** Wrap the given shapes in a named Module frame sized to their bounds. */

@@ -172,10 +172,7 @@ export function RunCursor() {
 				{isRunning ? (
 					<Square size={10} fill="currentColor" />
 				) : (
-					/* A triangle's centroid sits left of its bounding-box centre — for
-					   lucide's Play (6,3 → 20,12 → 6,21) that's 1.33 of 24 units, so
-					   0.6px at this size puts it optically centred in the circle. */
-					<Play size={11} fill="currentColor" style={{ marginLeft: 0.6 }} />
+					<Play size={11} fill="currentColor" className="RunCursor-play-glyph" />
 				)}
 			</button>
 			<span className="RunCursor-label">{isRunning ? 'Running…' : 'Run'}</span>

@@ -50,7 +50,7 @@ export function AmbientShader() {
 				distortion={busy ? 0.9 : 0.55}
 				swirl={busy ? 0.7 : 0.35}
 				speed={reduce ? 0 : busy ? 0.28 : 0.06}
-				style={{ width: '100%', height: '100%' }}
+				className="kane-ambient-mesh"
 			/>
 		</div>
 	)

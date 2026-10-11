@@ -151,7 +151,7 @@ function validate(kind: EntityKind, name: string, value: string, takenNames: Set
 	if (!value.trim()) return kind === 'totp' ? 'Shared key is required' : 'Value is required'
 	if (kind === 'totp') {
 		const key = value.replace(/\s+/g, '')
-		if (!BASE32_RE.test(key)) return 'TOTP key must be base32 (A–Z, 2–7)'
+		if (!BASE32_RE.test(key)) return 'TOTP key must be base32 (A-Z, 2-7)'
 		if (key.replace(/=+$/, '').length < 16) return 'TOTP key looks too short'
 	}
 	return null
@@ -185,7 +185,7 @@ function ValueCell({
 		)
 	}
 
-	if (!value) return <span className="vt-muted">—</span>
+	if (!value) return <span className="vt-muted">Not set</span>
 	const display = masked && !shown ? '•'.repeat(Math.min(value.length, 10)) : value
 	return (
 		<span className="vt-value">

@@ -10,6 +10,7 @@ import { createShapeId, Editor } from 'tldraw'
 import { getNodeDefinitions } from '../nodes/nodeTypes'
 import { beautifyCanvas, createModuleFrame, createNodeShape } from './graphOps'
 import { useKaneApp } from './KaneAppContext'
+import { useTipOpen } from './Tooltip'
 import { kaneToast } from './uiState'
 
 /**
@@ -45,9 +46,17 @@ export const MOSTLY_USED_TOOLS: ToolEntry[] = [
 	{ kind: 'input', shortcut: '⌥N' },
 ]
 
-function Tooltip({ label, shortcut }: { label: string; shortcut?: string }) {
+function Tooltip({
+	label,
+	shortcut,
+	instant,
+}: {
+	label: string
+	shortcut?: string
+	instant: boolean
+}) {
 	return (
-		<span className="side-tooltip">
+		<span className="side-tooltip" data-instant={instant || undefined}>
 			{label}
 			{shortcut && <kbd>{shortcut}</kbd>}
 		</span>
@@ -67,13 +76,9 @@ function ToolButton({
 	onClick: () => void
 	children: React.ReactNode
 }) {
-	const [hover, setHover] = useState(false)
+	const tip = useTipOpen()
 	return (
-		<div
-			className="side-btn-wrap"
-			onMouseEnter={() => setHover(true)}
-			onMouseLeave={() => setHover(false)}
-		>
+		<div className="side-btn-wrap" {...tip.triggerProps}>
 			<button
 				className={`side-btn ${active ? 'is-active' : ''}`}
 				aria-label={label}
@@ -81,7 +86,11 @@ function ToolButton({
 			>
 				{children}
 			</button>
-			{hover && <Tooltip label={label} shortcut={shortcut} />}
+			{/* An open group popover sits exactly where the tip would, and its
+			    rows already say what they are. */}
+			{tip.open && !active && (
+				<Tooltip label={label} shortcut={shortcut} instant={tip.instant} />
+			)}
 		</div>
 	)
 }

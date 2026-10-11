@@ -62,7 +62,7 @@ const LEVEL_LABEL: Record<ConsoleEntry['level'], string> = {
 }
 
 function formatBytes(n: number) {
-	if (n <= 0) return '—'
+	if (n <= 0) return '0 B'
 	if (n < 1024) return `${n} B`
 	return `${(n / 1024).toFixed(1)} kB`
 }
@@ -302,7 +302,7 @@ export function DevTools({
 				onPointerCancel={onHandleUp}
 				onKeyDown={onHandleKey}
 				onDoubleClick={() => setHeight(DEFAULT_H)}
-				title="Drag to resize · double-click to reset"
+				title="Drag to resize, or double-click to reset"
 			>
 				<span className="devtools-resize-grip" />
 			</div>

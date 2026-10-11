@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { FocusEvent, ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -21,6 +21,17 @@ import { createPortal } from 'react-dom'
 /** How long the pointer has to rest before the tip appears. */
 const OPEN_DELAY_MS = 380
 
+/**
+ * A tip that opens within this long of another one closing skips both the wait
+ * and the entrance. Moving along a row of controls, each label is there as soon
+ * as the pointer is; the first wait only exists to stop accidental tips.
+ * Radix's tooltip uses the same window (`skipDelayDuration`).
+ */
+const SKIP_DELAY_MS = 300
+
+/** When a tip last closed. Shared by every tip on the page. */
+let lastTipClosedAt = -Infinity
+
 /** Clear space to keep between a tip and the edge of the window. */
 const EDGE_MARGIN = 8
 
@@ -31,6 +42,57 @@ export type TipSide = 'top' | 'bottom' | 'left' | 'right'
 
 function clamp(value: number, lo: number, hi: number) {
 	return Math.max(lo, Math.min(value, Math.max(lo, hi)))
+}
+
+/**
+ * Whether a tip is showing and whether it skips its entrance, plus the handlers
+ * its trigger needs. Every tooltip in the app opens through this, so they all
+ * wait, and stop waiting, the same way.
+ */
+export function useTipOpen() {
+	const [open, setOpen] = useState(false)
+	/** Open without the entrance: a neighbour of an open tip, or keyboard focus. */
+	const [instant, setInstant] = useState(false)
+	const timer = useRef(0)
+
+	useEffect(() => () => window.clearTimeout(timer.current), [])
+
+	const show = (viaKeyboard: boolean) => {
+		window.clearTimeout(timer.current)
+		if (performance.now() - lastTipClosedAt < SKIP_DELAY_MS) {
+			setInstant(true)
+			setOpen(true)
+			return
+		}
+		timer.current = window.setTimeout(() => {
+			// a keystroke summoned it, so it doesn't animate in
+			setInstant(viaKeyboard)
+			setOpen(true)
+		}, OPEN_DELAY_MS)
+	}
+	const hide = () => {
+		window.clearTimeout(timer.current)
+		if (open) lastTipClosedAt = performance.now()
+		setOpen(false)
+	}
+
+	return {
+		open,
+		instant,
+		triggerProps: {
+			onMouseEnter: () => show(false),
+			onMouseLeave: hide,
+			// Keyboard users get the same hint when the control takes focus. Only
+			// keyboard focus, though: a click focuses the button too, and that
+			// would bring back the tip the click has just put away.
+			onFocusCapture: (e: FocusEvent) => {
+				if ((e.target as Element).matches(':focus-visible')) show(true)
+			},
+			onBlurCapture: hide,
+			// a tip left hanging over whatever the click just opened reads as a bug
+			onPointerDown: hide,
+		},
+	}
 }
 
 export function Tip({
@@ -47,14 +109,11 @@ export function Tip({
 	className?: string
 	children: ReactNode
 }) {
-	const [open, setOpen] = useState(false)
-	const timer = useRef(0)
+	const { open, instant, triggerProps } = useTipOpen()
 	const anchorRef = useRef<HTMLSpanElement>(null)
 	const tipRef = useRef<HTMLSpanElement>(null)
 	/** Viewport coordinates, once the tip has been measured. */
 	const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
-
-	useEffect(() => () => window.clearTimeout(timer.current), [])
 
 	/**
 	 * Placed from both boxes rather than from CSS offsets: the tip's own size
@@ -91,27 +150,8 @@ export function Tip({
 
 	if (!label) return <>{children}</>
 
-	const show = () => {
-		window.clearTimeout(timer.current)
-		timer.current = window.setTimeout(() => setOpen(true), OPEN_DELAY_MS)
-	}
-	const hide = () => {
-		window.clearTimeout(timer.current)
-		setOpen(false)
-	}
-
 	return (
-		<span
-			ref={anchorRef}
-			className={`tip-anchor ${className ?? ''}`}
-			onMouseEnter={show}
-			onMouseLeave={hide}
-			// keyboard users get the same hint when the control takes focus
-			onFocusCapture={show}
-			onBlurCapture={hide}
-			// a tip left hanging over whatever the click just opened reads as a bug
-			onPointerDown={hide}
-		>
+		<span ref={anchorRef} className={`tip-anchor ${className ?? ''}`} {...triggerProps}>
 			{children}
 			{open &&
 				createPortal(
@@ -119,6 +159,9 @@ export function Tip({
 						ref={tipRef}
 						className={`tooltip tooltip_fixed ${wrap ? 'tooltip_wrap' : ''}`}
 						role="tooltip"
+						// the side decides which edge it grows from; see .tooltip_fixed
+						data-side={side}
+						data-instant={instant || undefined}
 						// hidden for the one frame it takes to measure, never at 0,0
 						style={
 							pos
