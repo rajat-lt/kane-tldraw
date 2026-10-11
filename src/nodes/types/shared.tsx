@@ -9,15 +9,13 @@ import {
 	useEditor,
 	useValue,
 } from 'tldraw'
-import { AddIcon } from '../../components/icons/AddIcon'
-import { SubtractIcon } from '../../components/icons/SubtractIcon'
+import { Check, Copy, Eye, EyeOff, Minus, Plus } from 'lucide-react'
 import {
 	NODE_FOOTER_HEIGHT_PX,
 	NODE_HEADER_HEIGHT_PX,
 	NODE_ROW_BOTTOM_PADDING_PX,
 	NODE_ROW_HEADER_GAP_PX,
 	NODE_WIDTH_PX,
-	PORT_TYPE_COLORS,
 	PortDataType,
 } from '../../constants'
 import { Port, PortId, ShapePort } from '../../ports/Port'
@@ -243,8 +241,9 @@ export function NodeResizeGrip({
 			}}
 		>
 			<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-				<path d="M9.5 0.5v9h-9" fill="none" stroke="currentColor" strokeWidth="1.2" opacity="0.5" />
-				<path d="M9.5 4.5v5h-5" fill="none" stroke="currentColor" strokeWidth="1.2" />
+				{/* authored rather than from Lucide, which has no corner-resize glyph */}
+				<path d="M9.5 0.5v9h-9" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
+				<path d="M9.5 4.5v5h-5" fill="none" stroke="currentColor" strokeWidth="1.5" />
 			</svg>
 		</div>
 	)
@@ -302,23 +301,6 @@ export function NodeRow({
 		<div {...props} className={classNames('NodeRow', className)}>
 			{children}
 		</div>
-	)
-}
-
-/**
- * A label for a port row, displayed next to the port.
- */
-export function NodePortLabel({
-	children,
-	dataType,
-}: {
-	children: React.ReactNode
-	dataType: PortDataType
-}) {
-	return (
-		<span className="NodePortLabel" style={{ color: PORT_TYPE_COLORS[dataType] }}>
-			{children}
-		</span>
 	)
 }
 
@@ -409,7 +391,7 @@ export function NodeInputRow({
 					onPointerDown={onPointerDown}
 					onClick={() => onSpinner(-1)}
 				>
-					<TldrawUiButtonIcon icon={<SubtractIcon />} />
+					<TldrawUiButtonIcon icon={<Minus size={14} />} />
 				</TldrawUiButton>
 				<TldrawUiButton
 					title="increment"
@@ -417,7 +399,7 @@ export function NodeInputRow({
 					onPointerDown={onPointerDown}
 					onClick={() => onSpinner(1)}
 				>
-					<TldrawUiButtonIcon icon={<AddIcon />} />
+					<TldrawUiButtonIcon icon={<Plus size={14} />} />
 				</TldrawUiButton>
 			</div>
 		</NodeRow>
@@ -510,9 +492,9 @@ export function NodeTextRow({
 					onClick={() => setRevealed((v) => !v)}
 				>
 					{revealed ? (
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" /><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" /><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" /><line x1="2" x2="22" y1="2" y2="22" /></svg>
+						<EyeOff size={14} />
 					) : (
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+						<Eye size={14} />
 					)}
 				</button>
 			)}
@@ -653,9 +635,9 @@ export function NodeReadonlyRow({
 				}}
 			>
 				{copied ? (
-					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+					<Check size={13} />
 				) : (
-					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="13" height="13" x="9" y="9" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+					<Copy size={13} />
 				)}
 			</button>
 			{children}

@@ -1,3 +1,4 @@
+import { Crosshair } from 'lucide-react'
 import { T } from 'tldraw'
 
 /**
@@ -81,7 +82,12 @@ export function CardShotFrame({ view, target }: { view: string; target?: string 
 					<span className="CardShot-btn CardShot-btn_center" />
 				</div>
 			)}
-			{target && <span className="CardShot-target">◎ {target}</span>}
+			{target && (
+				<span className="CardShot-target">
+					<Crosshair size={11} />
+					<span className="CardShot-target-text">{target}</span>
+				</span>
+			)}
 		</div>
 	)
 }

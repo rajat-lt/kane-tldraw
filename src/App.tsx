@@ -1,4 +1,4 @@
-import { PanelLeftOpen } from 'lucide-react'
+import { LucideProvider, PanelLeftOpen } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { DefaultGrid, Editor, TLComponents, Tldraw, TldrawOptions, TLGridProps } from 'tldraw'
 import { AgentPanel } from './agent/AgentPanel'
@@ -23,6 +23,7 @@ import { KaneFinder } from './kane/KaneFinder'
 import { KaneMinimap } from './kane/KaneMinimap'
 import { KaneShortcuts } from './kane/KaneShortcuts'
 import { KaneToolbar } from './kane/KaneToolbar'
+import { installModuleFrameGrowth } from './kane/moduleFrameGrowth'
 import { RightBar } from './kane/RightBar'
 import { FollowRunningCard } from './kane/FollowRunningCard'
 import { RunCursor } from './kane/RunCursor'
@@ -128,9 +129,13 @@ function Shell() {
 
 	return (
 		<div className="kane-app" data-kane-theme={theme}>
+			<a className="skip-link" href="#main">
+				Skip to canvas
+			</a>
 			<Topbar />
 			<div className="kane-body">
-				<div className="kane-work">
+				{/* the work area: canvas, browser and drawers; the skip link's target */}
+				<main className="kane-work" id="main" tabIndex={-1}>
 					<div
 						className={`kane-canvas-col ${dragging ? 'dragging' : ''} ${canvasHidden ? 'is-collapsed' : ''} ${split && !collapsed ? 'is-split' : ''}`}
 						style={split && !collapsed ? { width: canvasW } : undefined}
@@ -172,6 +177,8 @@ function Shell() {
 								keepConnectionsAtBottom(editor)
 								disableTransparency(editor, ['connection'])
 								installWorkflowRules(editor)
+								// a run opens panels on cards; a module frame makes room for them
+								installModuleFrameGrowth(editor)
 								// A card type that changes width leaves every saved
 								// canvas with that card overlapping its neighbour.
 								// No-ops when nothing overlaps.
@@ -209,17 +216,7 @@ function Shell() {
 							aria-label="View steps on canvas"
 						>
 							<PanelLeftOpen size={18} />
-							<span
-								className="tooltip"
-								style={{
-									right: 'auto',
-									left: 'calc(100% + 8px)',
-									top: '50%',
-									transform: 'translateY(-50%)',
-								}}
-							>
-								View steps on canvas
-							</span>
+							<span className="tooltip right">View steps on canvas</span>
 						</button>
 					)}
 
@@ -232,7 +229,7 @@ function Shell() {
 					{browserView === 'window' && <BrowserWindow />}
 
 					<Drawer />
-				</div>
+				</main>
 				<RightBar />
 			</div>
 			<Toasts />
@@ -246,7 +243,9 @@ function seedCanvas(editor: Editor) {
 	editor.createShape({
 		type: 'node',
 		x: 200,
-		y: 640,
+		// The module's frame grows once a run opens its cards' panels (it ends at
+		// 638 then); this keeps the card the usual 60px below it even so.
+		y: 700,
 		props: {
 			node: { type: 'parameter', name: 'baseUrl', value: 'https://app.lambdatest.com' },
 		},
@@ -260,9 +259,14 @@ function seedCanvas(editor: Editor) {
 
 function App() {
 	return (
-		<KaneAppProvider>
-			<Shell />
-		</KaneAppProvider>
+		// One stroke weight for every icon. Lucide's default 2 reads heavier than
+		// Geist's medium stems at 12–16px; 1.75 matches them. An icon that needs
+		// a different weight still passes its own strokeWidth.
+		<LucideProvider strokeWidth={1.75}>
+			<KaneAppProvider>
+				<Shell />
+			</KaneAppProvider>
+		</LucideProvider>
 	)
 }
 

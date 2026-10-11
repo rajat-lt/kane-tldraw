@@ -104,7 +104,7 @@ export class InputNodeDefinition extends NodeDefinition<InputNode> {
 			view,
 			target,
 			thought:
-				`Focused “${target}”, cleared what was in it and typed ${text ? `${text.length} character${text.length === 1 ? '' : 's'}` : 'nothing — the text was empty'}. ` +
+				`Focused “${target}”, cleared what was in it and typed ${text ? `${text.length} character${text.length === 1 ? '' : 's'}` : 'nothing, because the text was empty'}. ` +
 				(fromPort
 					? 'The text came in through the port rather than from the card.'
 					: node.pressEnter

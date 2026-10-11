@@ -18,7 +18,6 @@ import {
 	Ticket,
 	X,
 } from 'lucide-react'
-import gsap from 'gsap'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createShapeId, TLShapeId } from 'tldraw'
@@ -90,6 +89,8 @@ import { createNodeShape } from '../kane/graphOps'
 import { ContextEntryItem, ContextItemKind, useKaneApp } from '../kane/KaneAppContext'
 import { ModeSegmented } from '../kane/ModeCluster'
 import { Tip } from '../kane/Tooltip'
+import { gsap } from '../lib/gsap'
+import { EASE_OUT } from '../lib/motion'
 import { NodeShape } from '../nodes/NodeShapeUtil'
 import { getNodeDefinition } from '../nodes/nodeTypes'
 import { paced } from '../utils/pace'
@@ -232,6 +233,18 @@ const TEXTAREA_MAX_VH = 0.42
 
 /** Motion spring driving the maximize height transition. */
 const SIZE_SPRING = { type: 'spring', stiffness: 240, damping: 30, mass: 0.9 } as const
+
+/**
+ * A task step rises 6px into the list as it arrives. Full transform strings,
+ * which Motion composites (`y` would run on the main thread, busy building the
+ * canvas at exactly this moment). Reduced motion keeps the fade, not the rise.
+ */
+const STEP_BELOW = { opacity: 0, transform: 'translateY(6px)' }
+const STEP_IN_PLACE = { opacity: 1, transform: 'translateY(0px)', transitionEnd: { transform: 'none' } }
+const STEP_SPRING = { type: 'spring', stiffness: 380, damping: 28 } as const
+const STEP_FADED = { opacity: 0 }
+const STEP_SHOWN = { opacity: 1 }
+const STEP_FADE = { duration: 0.2, ease: EASE_OUT }
 
 /** Typing "/" at the start of a word opens the command palette … */
 const SLASH_TOKEN_OPEN = /(?:^|\s)\/$/
@@ -405,7 +418,7 @@ export function AgentPanel() {
 			if (generating || (run && !run.done)) {
 				setQueued((q) => [...q, value])
 				setText('')
-				pushToast('Queued — it will run when the current build finishes', 'info')
+				pushToast('Queued. It will run when the current build finishes.', 'info')
 				return
 			}
 
@@ -418,8 +431,8 @@ export function AgentPanel() {
 			if (/^run( it| workflow| the (test|workflow))?$/i.test(value)) {
 				pushToast(
 					runWholeCanvas(editor)
-						? 'Running the workflow — watch the cards light up'
-						: 'There is nothing to run yet — give me an objective first'
+						? 'Running the workflow. Watch the cards light up.'
+						: 'There is nothing to run yet. Give me an objective first.'
 				)
 				return
 			}
@@ -527,7 +540,7 @@ export function AgentPanel() {
 			})
 			// mark it read-only rather than tearing it down — see RunState.done
 			setRun((r) => (r ? { ...r, done: true } : r))
-			pushToast('Saved to Context — open the Context tab to revisit it', 'success')
+			pushToast('Saved to Context. Open the Context tab to revisit it.', 'success')
 
 			// hand off to the next queued objective, if any
 			setQueued((q) => {
@@ -712,14 +725,13 @@ export function AgentPanel() {
 														{taskItems.map((t, i) => (
 															<motion.div
 																key={t.id}
-																initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-																animate={{ opacity: 1, y: 0 }}
-																transition={{
-																	type: 'spring',
-																	stiffness: 380,
-																	damping: 28,
-																	delay: reduceMotion ? 0 : Math.min(i, 4) * 0.03,
-																}}
+																initial={reduceMotion ? STEP_FADED : STEP_BELOW}
+																animate={reduceMotion ? STEP_SHOWN : STEP_IN_PLACE}
+																transition={
+																	reduceMotion
+																		? STEP_FADE
+																		: { ...STEP_SPRING, delay: Math.min(i, 4) * 0.03 }
+																}
 															>
 																{t.kind === 'checkpoint' ? (
 																	<TaskItem>
@@ -837,8 +849,7 @@ export function AgentPanel() {
 									</span>
 									<button
 										type="button"
-										className="icon-btn"
-										style={{ padding: 2 }}
+										className="icon-btn icon-btn_tight"
 										onClick={() => setContextItems((p) => p.filter((x) => x.id !== c.id))}
 										aria-label="Remove context"
 									>

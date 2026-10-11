@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { createShapeId, useEditor } from 'tldraw'
+import { skipCardEntrance } from '../nodes/NodeShapeUtil'
 import { getNodeDefinitions } from '../nodes/nodeTypes'
 import { beautifyCanvas, createModuleFrame, createNodeShape } from './graphOps'
 import { finderState, kaneToast } from './uiState'
@@ -55,12 +56,10 @@ export function KaneShortcuts() {
 					e.stopPropagation()
 					const defs = getNodeDefinitions(editor)
 					const def = defs[kind as keyof typeof defs]
-					createNodeShape(
-						editor,
-						createShapeId(),
-						editor.getViewportPageBounds().center,
-						def.getDefault()
-					)
+					const id = createShapeId()
+					// made by a keystroke, so it is simply there
+					skipCardEntrance(id)
+					createNodeShape(editor, id, editor.getViewportPageBounds().center, def.getDefault())
 					return
 				}
 				if (e.code === 'KeyM') {

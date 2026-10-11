@@ -1112,6 +1112,64 @@ control work on some rows and not others, it shows the version's detail on all
 of them. Say the word if you want real canvas restore for versions saved in the
 session.
 
+## Batch 19 (2026-10-11): a design-skills pass
+
+Five design skills were installed into the project and their findings fixed:
+Leonxlnx/taste-skill (`.agents/skills/`, 13 skills), Impeccable (its skill, detector,
+agents and hooks under `.claude/`), Emil Kowalski's `animate`, Impeccable's `delight`
+(it already ships inside Impeccable, so the separate install found nothing to add)
+and MengTo's `matterjs`. Kane is a dense editor, so the skills' marketing-page rules
+(hero layouts, display type, scroll reveals) were set aside and the product rules
+applied. The Impeccable detector reports 0 findings on the source, and 0 on the
+running app at 1280 and 390px wide.
+
+**Craft floor.** Geist and Geist Mono are self-hosted (Fontsource) instead of the
+platform font; content text has a 12px floor; tabular numerals wherever numbers line
+up. Selection, caret, scrollbars, focus rings and link underlines are themed. Every
+Lucide icon is drawn at stroke 1.75 through `LucideProvider` (matched by eye to
+Geist's medium stems; 2 read heavy); hand-copied icon paths became Lucide components,
+and glyphs standing in for icons (`◎`, a `✓` in a menu label) became real icons. A
+rendered contrast sweep of every drawer, popover, panel, toast and the browser view
+lifted 24 text styles under 4.5:1 (mostly `--gray-400` text, and green or violet
+words on their own tint, now `--green-text` / `--purple-text`).
+
+**Motion.** Curves follow the animate skill: `--ease` is the strong ease-out,
+`--ease-quick` is plain `ease` for hovers (Tailwind's default curve points at it too)
+and `--ease-in-out` covers travel. Popovers and tooltips scale out of their trigger
+(origins tied to each caret); tooltips take 125ms and a neighbour of an open tip
+appears instantly (one shared `useTipOpen`). What a keystroke opens (⌘F, the slash
+palette, URL suggestions, ⌥-shortcut cards) appears without an entrance. Buttons give
+a 0.97 press. Motion components animate full transform strings (Motion composites
+those; `x`/`y` run on the main thread), and every animation has a reduced-motion path:
+fades stay, travel and decorative loops go. Toasts enter and leave through Motion, sit
+under the top bar instead of over Save, and their dismiss button is visible on hover.
+
+Bugs found on the way: the card AI composer spent its first 160ms at the overlay's
+top-left (its inline `transform` lost to the entrance animation, now `translate`);
+the toolbar tooltips jumped half a width; a click brought back the tooltip it had just
+closed; a shared transition rule at full specificity cancelled the toolbar's reveal;
+the top bar overflowed at 1024px while a run was going (the name now truncates);
+a paused run said "Running" (now "Paused"); module frames clipped the panels a run
+opens on their cards (frames now grow to fit, `kane/moduleFrameGrowth.ts`); and
+Tailwind was scanning the skills' docs, shipping 12 kB of their example classes
+(`@source not '../.agents'`).
+
+**Copy and structure.** No em dashes in anything the app shows (38 strings and the
+page title rewritten; the mock website's own copy is left as a third-party page would
+have it).
+A favicon drawn from the KaneAI mark, a description, a theme colour, a `<main>`
+landmark with a skip link, the z-index values named as one scale, coloured halos
+replaced by rings or offset shadows, and static inline styles moved into CSS.
+
+**The run tray (delight + matter.js).** When a run goes through to its end, its
+toast says how many steps passed and how long they took (the time is left out if
+the run sat paused), and one small card per step drops into a tray beside the words
+and settles. The physics is Matter.js, loaded only at that moment (a 26 kB gzip
+chunk). It drops at most twelve cards into column slots, which was checked headlessly
+across 240 runs: none escaped the tray and every pile settled within 2.8s. With
+reduced motion the cards are drawn already settled; nothing simulates while the page
+is hidden; dismissing the toast tears the engine down. A stopped run gets no tray.
+
 ## Prototype notes (no backend)
 
 - The tldraw **agent template requires a Cloudflare worker + LLM API keys and has no mock

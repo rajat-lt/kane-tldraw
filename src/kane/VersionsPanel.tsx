@@ -91,7 +91,9 @@ function VersionRow({
 					)}
 					<span className="ver-meta">
 						<span className="ver-stamp">{formatStamp(entry.at)}</span>
-						<span className="ver-dot">·</span>
+						<span className="ver-dot" aria-hidden>
+							·
+						</span>
 						<span className="ver-author">
 							<span className="ver-avatar" aria-hidden>
 								{initialsOf(entry.author)}

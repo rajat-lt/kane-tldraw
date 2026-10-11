@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { MotionProps } from "motion/react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import type { CSSProperties, ElementType, JSX } from "react";
 import { memo, useMemo } from "react";
 
@@ -46,6 +46,18 @@ const ShimmerComponent = ({
     () => (children?.length ?? 0) * spread,
     [children, spread]
   );
+
+  // The sweeping highlight is motion that never stops. With reduced motion the
+  // text holds still in the muted colour the sweep runs over, and the label
+  // ("Thinking…", "Building the workflow…") still says it is in progress.
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) {
+    return (
+      <Component className={cn("text-muted-foreground", className)}>
+        {children}
+      </Component>
+    );
+  }
 
   return (
     <MotionComponent

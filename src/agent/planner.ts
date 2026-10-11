@@ -462,7 +462,7 @@ export async function planWorkflow(
 				x: (bounds?.x ?? tail.x) + 320,
 				y: bounds?.y ?? tail.y,
 			}
-			ui.note('A workflow already exists — continuing it from its last card.')
+			ui.note('A workflow already exists, so this continues it from its last card.')
 		}
 	}
 
@@ -572,13 +572,13 @@ export async function planWorkflow(
 	clearAiBuilding(editor)
 
 	if (signal.aborted) {
-		ui.note('Stopped — kept everything generated so far.')
+		ui.note('Stopped. Everything generated so far is kept.')
 		return
 	}
 
 	b.finishCamera()
 
-	ui.checkpoint(`Workflow ready — ${b.created.length} cards`)
+	ui.checkpoint(`Workflow ready: ${b.created.length} cards`)
 
 	if (analysis.wantsRun && b.created.length > 0) {
 		const runStep = ui.begin('run', 'workflow')
@@ -587,6 +587,6 @@ export async function planWorkflow(
 		runWholeCanvas(editor)
 		ui.note('Running it now.')
 	} else {
-		ui.note('Press ▶ on the run label to execute it.')
+		ui.note('Press play on the Run label to start it.')
 	}
 }

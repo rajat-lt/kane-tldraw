@@ -66,7 +66,11 @@ function Composer({ shapeId }: { shapeId: TLShapeId }) {
 			const fitsRight = right.x + GAP_PX + POPOVER_W <= window.innerWidth - 8
 			const x = fitsRight ? right.x + GAP_PX : left.x - GAP_PX - POPOVER_W
 			const y = Math.max(8, Math.min(right.y, window.innerHeight - POPOVER_H - 8))
-			el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`
+			// `translate`, not `transform`: the CSS entrance animates transform,
+			// and an animation outranks an inline style — positioned with
+			// transform, it spent its first 160ms at the overlay's top-left.
+			el.style.translate = `${Math.round(x)}px ${Math.round(y)}px`
+			el.dataset.side = fitsRight ? 'right' : 'left'
 		},
 		[editor, shapeId]
 	)
@@ -112,12 +116,13 @@ function Composer({ shapeId }: { shapeId: TLShapeId }) {
 		setBusy(false)
 		if (changes.length === 0) {
 			pushToast(
-				`Nothing in that to apply to the ${cardTitle(editor, shape as NodeShape).toLowerCase()} — try naming a field, a count or a duration`,
+				`Nothing in that to apply to the ${cardTitle(editor, shape as NodeShape).toLowerCase()}. Try naming a field, a count or a duration.`,
 				'info'
 			)
 			return
 		}
-		pushToast(changes.join(' · '), 'success')
+		// each change is its own short sentence ("Clicks 3×", "Targets “Sign in”")
+		pushToast(changes.length === 1 ? changes[0] : `${changes.join('. ')}.`, 'success')
 		setText('')
 		close()
 	}

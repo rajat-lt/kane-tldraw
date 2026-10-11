@@ -1,5 +1,6 @@
 import { Editor, TLShapeId } from 'tldraw'
 import { NodeShape } from '../nodes/NodeShapeUtil'
+import { kaneRunToast } from '../kane/uiState'
 import { EditorAtom } from '../utils'
 import { ExecutionGraph } from './ExecutionGraph'
 import { runPaused } from './runControl'
@@ -38,6 +39,7 @@ export async function startExecution(editor: Editor, startingNodeIds: Set<TLShap
 			runningGraph: graph,
 		}
 	})
+	const startedAt = performance.now()
 	try {
 		await graph.execute()
 	} finally {
@@ -46,6 +48,15 @@ export async function startExecution(editor: Editor, startingNodeIds: Set<TLShap
 			if (state.runningGraph !== graph) return state
 			return { ...state, runningGraph: null }
 		})
+	}
+
+	// A run that went through to its end reports what actually happened: how
+	// many steps ran and, unless it sat paused, how long it took. A stopped run
+	// doesn't; stopping it was the user's own doing. (One that threw never
+	// reaches here.)
+	const steps = graph.getExecutedCount()
+	if (graph.finished && steps > 0) {
+		kaneRunToast({ steps, ms: graph.wasHeld ? undefined : performance.now() - startedAt })
 	}
 }
 

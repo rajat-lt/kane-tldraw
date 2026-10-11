@@ -156,7 +156,7 @@ export function BrowserWindow() {
 				onPointerCancel={onDragEnd}
 			>
 				<Globe size={13} />
-				<span className="browser-window-title">Browser preview — {url.split('/')[0]}</span>
+				<span className="browser-window-title">Browser preview · {url.split('/')[0]}</span>
 				<span className="browser-window-spacer" />
 				<button
 					className="icon-btn"

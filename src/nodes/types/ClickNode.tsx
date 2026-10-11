@@ -179,7 +179,7 @@ export class ClickNodeDefinition extends NodeDefinition<ClickNode> {
 				holdMs: node.clickType === 'hold' ? holdMs : undefined,
 				label:
 					times > 1
-						? `${describeClick(node, target)} — ${i}/${times}`
+						? `${describeClick(node, target)} (${i} of ${times})`
 						: describeClick(node, target),
 			})
 			await runSleep(paced(node.clickType === 'hold' ? 350 + holdMs : 650))

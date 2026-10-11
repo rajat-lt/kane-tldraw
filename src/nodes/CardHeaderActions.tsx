@@ -65,7 +65,7 @@ export function CardHeaderActions({ shape }: { shape: NodeShape }) {
 					title={
 						structured
 							? 'Write this condition in plain English'
-							: 'Build this condition from operand · operator · operand'
+							: 'Build this condition from operand → operator → operand'
 					}
 					aria-label={
 						structured ? 'Switch to plain English' : 'Switch to operand and operator'

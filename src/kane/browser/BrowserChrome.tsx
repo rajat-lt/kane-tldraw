@@ -80,13 +80,12 @@ function UrlBar({ onNavigate }: { onNavigate: (url: string) => void }) {
 			/>
 			{focused && draft && (
 				<button
-					className="icon-btn"
-					style={{ padding: 2 }}
+					className="icon-btn icon-btn_tight"
 					onMouseDown={(e) => {
 						e.preventDefault()
 						setDraft('')
 					}}
-					aria-label="Clear"
+					aria-label="Clear the address"
 				>
 					<X size={14} />
 				</button>
@@ -271,7 +270,7 @@ export function BrowserSubTopbar({
 			<UrlBar onNavigate={onNavigate} />
 			<RecordingToggle onToggle={onToggleRecording} />
 			{onToggleInspect && (
-				<Tip label="Inspector — pick any element to read its properties and write an AI step for it" wrap>
+				<Tip label="Inspector: pick any element to read its properties and write an AI step for it" wrap>
 					<button
 						className={`icon-btn ${inspecting ? 'is-active' : ''}`}
 						onClick={onToggleInspect}
@@ -284,7 +283,7 @@ export function BrowserSubTopbar({
 			)}
 			{/* DevTools only exist while docked — a popped-out window closes them */}
 			{variant === 'split' && onToggleDevtools && (
-				<Tip label="Inspect — Console & Network" wrap>
+				<Tip label="DevTools: Console and Network" wrap>
 					<button
 						className={`icon-btn ${devtoolsOpen ? 'is-active' : ''}`}
 						onClick={onToggleDevtools}
@@ -528,7 +527,7 @@ export function BrowserSurface({ variant }: { variant: 'split' | 'window' }) {
 					{inspecting && (
 						<div className="inspect-bar" role="status">
 							<TextSelect size={13} />
-							<span>Inspector is on — click any element on the page to inspect it</span>
+							<span>Inspector is on. Click any element on the page to inspect it.</span>
 							<button
 								className="inspect-bar-off"
 								onClick={() => {

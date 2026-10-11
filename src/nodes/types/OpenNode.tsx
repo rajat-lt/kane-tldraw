@@ -80,7 +80,7 @@ export class OpenNodeDefinition extends NodeDefinition<OpenNode> {
 			view: viewForUrl(url),
 			thought:
 				`Navigated to ${url} and waited for the page to finish loading before handing on. ` +
-				'Nothing on the page was touched — this step only gets the browser to the right place.',
+				'Nothing on the page was touched. This step only gets the browser to the right place.',
 		})
 		return { output: url }
 	}

@@ -78,7 +78,7 @@ export function Credits() {
 		<div className="kane-ui rb-credits">
 			<Context maxTokens={CREDIT_ALLOWANCE} usedTokens={used}>
 				<ContextTrigger
-					aria-label={`Credits — ${used} of ${CREDIT_ALLOWANCE} used`}
+					aria-label={`Credits: ${used} of ${CREDIT_ALLOWANCE} used`}
 					className="credits-trigger"
 					iconLabel="Credits used"
 					title="Credits"

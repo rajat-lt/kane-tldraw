@@ -1,6 +1,7 @@
 import { Frame, Globe } from 'lucide-react'
 import { useValue } from 'tldraw'
 import { executionState } from '../execution/executionState'
+import { runPaused } from '../execution/runControl'
 import { SESSION_STATES, SessionKey } from './catalog'
 import { useKaneApp } from './KaneAppContext'
 import { Tip } from './Tooltip'
@@ -20,6 +21,8 @@ export function SessionStatus() {
 		() => (editor ? executionState.get(editor).runningGraph !== null : false),
 		[editor]
 	)
+	// A held run is still in progress, but it isn't running: say which.
+	const paused = useValue('run paused', () => runPaused.get(), [])
 
 	const key: SessionKey = disconnected
 		? 'disconnected'
@@ -28,7 +31,9 @@ export function SessionStatus() {
 			: generating
 				? 'generating'
 				: running
-					? 'running'
+					? paused
+						? 'paused'
+						: 'running'
 					: 'idle'
 	const s = SESSION_STATES[key]
 	return (

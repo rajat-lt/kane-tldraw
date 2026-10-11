@@ -208,6 +208,7 @@ export type SessionKey =
 	| 'recording'
 	| 'generating'
 	| 'running'
+	| 'paused'
 	| 'disconnected'
 	| 'errored'
 
@@ -217,6 +218,7 @@ export const SESSION_STATES: Record<SessionKey, { label: string; color: string }
 	recording: { label: 'Recording', color: 'var(--red)' },
 	generating: { label: 'Generating', color: 'var(--purple)' },
 	running: { label: 'Running', color: 'var(--green)' },
+	paused: { label: 'Paused', color: 'var(--amber)' },
 	disconnected: { label: 'Disconnected', color: 'var(--red)' },
 	errored: { label: 'Errored', color: 'var(--red)' },
 }
@@ -323,7 +325,7 @@ export const SAVED_MODULES: SavedModule[] = [
 	},
 	{
 		id: 'm3',
-		name: 'Checkout — guest',
+		name: 'Guest checkout',
 		version: 5,
 		// the payment sheet still needs a person
 		automated: false,

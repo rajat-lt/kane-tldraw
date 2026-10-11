@@ -17,6 +17,7 @@ import {
 	generateCode,
 	readCanvas,
 } from './codegen'
+import type { RunSummary } from './uiState'
 
 /**
  * App-level state shared by the Kane chrome (topbar, right bar, agent panel,
@@ -67,7 +68,7 @@ function seedVersions(now: number): TestCaseVersion[] {
 		{ version: 4, message: 'Assert the order number on the confirmation page', daysAgo: 2, author: 'Aditi Bhatt' },
 		{ version: 3, message: 'Retry the 2FA step once before failing', daysAgo: 6, author: 'Rowan Silva' },
 		{ version: 2, message: 'Add the guest checkout branch', daysAgo: 11, author: 'Priya Nair' },
-		{ version: 1, message: 'First pass — login through to payment', daysAgo: 19, author: 'Aditi Bhatt' },
+		{ version: 1, message: 'First pass: login through to payment', daysAgo: 19, author: 'Aditi Bhatt' },
 	]
 	return seed.map((v) => ({
 		version: v.version,
@@ -128,6 +129,8 @@ export interface KaneToast {
 	id: number
 	msg: string
 	tone: ToastTone
+	/** Set on the toast that reports a finished run; it draws the run tray. */
+	run?: RunSummary
 }
 
 /** A context item attached to an objective (file, canvas context, ticket, page). */
@@ -274,7 +277,7 @@ interface KaneAppState {
 	requestComposerText(text: string): void
 
 	toasts: KaneToast[]
-	pushToast(msg: string, tone?: ToastTone): void
+	pushToast(msg: string, tone?: ToastTone, run?: RunSummary): void
 	dismissToast(id: number): void
 
 	url: string
@@ -505,20 +508,26 @@ export function KaneAppProvider({ children }: { children: ReactNode }) {
 	}, [])
 
 	const toastSeq = useRef(0)
-	const pushToast = useCallback((msg: string, tone: ToastTone = 'info') => {
+	const pushToast = useCallback((msg: string, tone: ToastTone = 'info', run?: RunSummary) => {
 		const id = ++toastSeq.current
-		setToasts((prev) => [...prev, { id, msg, tone }])
-		window.setTimeout(() => {
-			setToasts((prev) => prev.filter((t) => t.id !== id))
-		}, 3000)
+		setToasts((prev) => [...prev, { id, msg, tone, run }])
+		window.setTimeout(
+			() => {
+				setToasts((prev) => prev.filter((t) => t.id !== id))
+			},
+			// a run's toast stays long enough for its steps to land and be read
+			run ? 4500 : 3000
+		)
 	}, [])
 
 	// Toasts fired from outside React (side effects, canvas overlays).
 	useEffect(() => {
 		function onKaneToast(e: Event) {
-			const detail = (e as CustomEvent<string | { msg: string; tone: ToastTone }>).detail
+			const detail = (
+				e as CustomEvent<string | { msg: string; tone: ToastTone; run?: RunSummary }>
+			).detail
 			if (typeof detail === 'string') pushToast(detail)
-			else pushToast(detail.msg, detail.tone)
+			else pushToast(detail.msg, detail.tone, detail.run)
 		}
 		window.addEventListener('kane-toast', onKaneToast)
 		return () => window.removeEventListener('kane-toast', onKaneToast)

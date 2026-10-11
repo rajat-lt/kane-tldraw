@@ -30,6 +30,7 @@ import {
 } from '@/components/ai-elements/reasoning'
 import { Task, TaskContent, TaskItem, TaskItemFile, TaskTrigger } from '@/components/ai-elements/task'
 import { Tool, ToolContent, ToolHeader, ToolInput } from '@/components/ai-elements/tool'
+import { EASE_OUT } from '../lib/motion'
 import { NodeShape } from '../nodes/NodeShapeUtil'
 import { getNodeDefinition } from '../nodes/nodeTypes'
 import { formatDay, formatStamp } from '../utils/formatDate'
@@ -103,7 +104,7 @@ function ContextLog() {
 					<div key={entry.id} className="ctx-entry">
 						<div className="ctx-head">
 							<span className="ctx-when">{formatStamp(entry.at)}</span>
-							<Tip label="Send this prompt again — loads it into the omnibox" wrap side="left">
+							<Tip label="Load this prompt into the omnibox to send it again" wrap side="left">
 								<button
 									className="ctx-reuse"
 									onClick={() => reuse(entry.objective)}
@@ -224,7 +225,7 @@ function ModuleList() {
 						if (!editor) return
 						const center = editor.getViewportPageBounds().center
 						stampModule(editor, m, { x: center.x - 400, y: center.y - 100 })
-						pushToast(`Inserted module “${m.name}” — editable copy`, 'success')
+						pushToast(`Inserted an editable copy of “${m.name}”`, 'success')
 						closeDrawer()
 					}}
 				>
@@ -245,7 +246,9 @@ function ModuleList() {
 								<Folder size={11} />
 								{m.folder}
 							</span>
-							<span className="m-dot">·</span>
+							<span className="m-dot" aria-hidden>
+								·
+							</span>
 							<span>{m.nodes.length} steps</span>
 						</div>
 						<div className="m-sub m-updated">Updated {formatDay(m.updatedAt)}</div>
@@ -327,14 +330,7 @@ function StepsList() {
 function PendingPanel({ label }: { label?: string }) {
 	return (
 		<div className="drawer-body">
-			<div
-				style={{
-					padding: 24,
-					color: 'var(--gray-500)',
-					fontSize: 13,
-					textAlign: 'center',
-				}}
-			>
+			<div className="drawer-pending">
 				The “{label}” panel is not yet specified.
 				<br />
 				Shown here is the confirmed slide-in container behavior.
@@ -342,6 +338,19 @@ function PendingPanel({ label }: { label?: string }) {
 		</div>
 	)
 }
+
+/**
+ * The panel slides in from the right edge and leaves the same way. Full
+ * transform strings, which Motion composites, where `x` would run on the main
+ * thread; at rest the panel carries no transform. Reduced motion trades the
+ * slide for a short fade rather than a cut.
+ */
+const DRAWER_OFFSCREEN = { transform: 'translateX(100%)' }
+const DRAWER_IN_PLACE = { transform: 'translateX(0%)', transitionEnd: { transform: 'none' } }
+const DRAWER_SPRING = { type: 'spring', stiffness: 420, damping: 42, mass: 0.9 } as const
+const DRAWER_FADED = { opacity: 0 }
+const DRAWER_SHOWN = { opacity: 1 }
+const DRAWER_FADE = { duration: 0.2, ease: EASE_OUT }
 
 export function Drawer() {
 	const { drawerId, closeDrawer } = useKaneApp()
@@ -357,14 +366,10 @@ export function Drawer() {
 					key={drawerId}
 					className="drawer"
 					aria-label={`${item?.label} panel`}
-					initial={{ x: '100%' }}
-					animate={{ x: 0 }}
-					exit={{ x: '100%' }}
-					transition={
-						reduceMotion
-							? { duration: 0 }
-							: { type: 'spring', stiffness: 420, damping: 42, mass: 0.9 }
-					}
+					initial={reduceMotion ? DRAWER_FADED : DRAWER_OFFSCREEN}
+					animate={reduceMotion ? DRAWER_SHOWN : DRAWER_IN_PLACE}
+					exit={reduceMotion ? DRAWER_FADED : DRAWER_OFFSCREEN}
+					transition={reduceMotion ? DRAWER_FADE : DRAWER_SPRING}
 				>
 			<div className="drawer-head">
 				<span className="drawer-title">{item?.label}</span>

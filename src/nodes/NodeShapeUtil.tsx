@@ -19,6 +19,7 @@ import {
 import { PORT_RADIUS_PX } from '../constants'
 import { executionState } from '../execution/executionState'
 import { aiBuildState, errorFlashState, renameState } from '../kane/uiState'
+import { EASE_OUT } from '../lib/motion'
 import { Port } from '../ports/Port'
 import { CardHeaderActions } from './CardHeaderActions'
 import { getNodeOutputPortInfo, getNodePorts } from './nodePorts'
@@ -177,6 +178,38 @@ export class NodeShapeUtil extends ShapeUtil<NodeShape> {
  */
 const enteredCards = new Set<TLShapeId>()
 
+/**
+ * Create the card with this id without its entrance. For cards made from a
+ * keyboard shortcut: a keystroke expects its result at once, and is the kind
+ * of action people repeat quickly.
+ */
+export function skipCardEntrance(id: TLShapeId) {
+	enteredCards.add(id)
+}
+
+/**
+ * A new card springs in from just below, small and blurred. Full transform
+ * strings rather than x/y/scale: Motion hands those to the compositor, which
+ * matters because cards arrive while the agent is building, the main thread's
+ * busiest moment. At rest the card carries no transform or filter at all.
+ */
+const CARD_ENTER_FROM = {
+	opacity: 0,
+	transform: 'translateY(10px) scale(0.92)',
+	filter: 'blur(6px)',
+}
+const CARD_AT_REST = {
+	opacity: 1,
+	transform: 'translateY(0px) scale(1)',
+	filter: 'blur(0px)',
+	transitionEnd: { transform: 'none', filter: 'none' },
+}
+const CARD_SPRING = { type: 'spring', stiffness: 420, damping: 30, mass: 0.8 } as const
+/** With reduced motion a new card still fades in where it lands; it just doesn't travel. */
+const CARD_FADE_FROM = { opacity: 0 }
+const CARD_FADE_TO = { opacity: 1 }
+const CARD_FADE = { duration: 0.2, ease: EASE_OUT }
+
 function NodeShapeComponent({ shape }: { shape: NodeShape }) {
 	const editor = useEditor()
 	const reduceMotion = useReducedMotion()
@@ -266,7 +299,7 @@ function NodeShapeComponent({ shape }: { shape: NodeShape }) {
 	const showHeaderValue =
 		output !== undefined && output.dataType === 'value' && !output.multi && output.value !== null
 
-	const animateEntry = isFirstMount.current && !reduceMotion
+	const isNewCard = isFirstMount.current
 
 	// A resizable card is exactly as tall as its geometry says, so the rows can
 	// share whatever height was dragged onto it. Every other card is still sized
@@ -301,11 +334,9 @@ function NodeShapeComponent({ shape }: { shape: NodeShape }) {
 					NodeShape_selected: isSelected,
 					NodeShape_sized: canResize,
 				})}
-				initial={
-					animateEntry ? { opacity: 0, scale: 0.92, y: 10, filter: 'blur(6px)' } : false
-				}
-				animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
-				transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.8 }}
+				initial={!isNewCard ? false : reduceMotion ? CARD_FADE_FROM : CARD_ENTER_FROM}
+				animate={reduceMotion ? CARD_FADE_TO : CARD_AT_REST}
+				transition={reduceMotion ? CARD_FADE : CARD_SPRING}
 			>
 				{/* No proximity glow here any more. The gradient sweep it painted on
 				    hover read as a state the card was in rather than as a pointer

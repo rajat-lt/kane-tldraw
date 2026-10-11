@@ -180,7 +180,7 @@ function ApiNodeComponent({ shape, node }: NodeComponentProps<ApiNode>) {
 			<div className="NodeBodyArea">
 				<span className="NodeBodyArea-label">
 					Body
-					{!bodyAllowed && <em> — {node.method} sends none</em>}
+					{!bodyAllowed && <em> ({node.method} sends none)</em>}
 				</span>
 				<textarea
 					className="NodeBodyArea-input"

@@ -11,15 +11,22 @@
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
+/* Tailwind scans the whole project for class names. The design skills under
+   .agents/ are documentation full of example classes, and every one of them
+   would otherwise be generated into the app's stylesheet. */
+@source not '../.agents';
 
 /* ============================================================================
    KaneAI design tokens (carried over from the previous build)
    ========================================================================== */
 :root {
-	--font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', 'Segoe UI', Roboto,
-		Helvetica, Arial, sans-serif;
-	/* code: the card editor, the request body, and the locator rows */
-	--font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+	/* Geist, self-hosted through Fontsource (imported in main.tsx), so the
+	   product has a typeface of its own instead of whatever the platform's
+	   system font is. The system faces stay only as the swap fallback. */
+	--font-sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	/* code and data: the card editor, request bodies, locators, ids, the console */
+	--font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+		monospace;
 
 	--white: #ffffff;
 	--gray-50: #f6f8fa;
@@ -33,6 +40,12 @@
 	--gray-700: #424a53;
 	--gray-800: #2d333b;
 	--gray-900: #1f2328;
+	/* Placeholder text. Its own token so it can never drift back to gray-400,
+	   which measured 2.6:1 on white; gray-500 is 4.55:1 here and 4.9:1 on the
+	   dark surface. Declared again in the dark block: a var() is resolved
+	   where it is declared, so a :root-only alias would carry the light value
+	   into the dark theme. */
+	--text-placeholder: var(--gray-500);
 
 	--blue: #0a69da;
 	--blue-600: #0857b8;
@@ -41,11 +54,15 @@
 	--green: #1f883d;
 	--green-hover: #1a7f37;
 	--green-soft: #dafbe1;
+	/* green for words on a green tint: --green manages 4:1 there, this 6.5:1 */
+	--green-text: #116329;
 	--red: #cf222e;
 	--red-soft: #ffebe9;
 	--amber: #9a6700;
 	--amber-soft: #fff8c5;
 	--purple: #8250df;
+	/* purple for words on a purple tint: --purple manages 4.4:1 there, this 6.4:1 */
+	--purple-text: #6639ba;
 	/* the accent the card tabs underline with, and the input-port ring */
 	--orange: #d1600a;
 
@@ -65,8 +82,35 @@
 	--shadow-pop: 0 8px 24px rgba(31, 35, 40, 0.12);
 	--shadow-window: 0 12px 40px rgba(31, 35, 40, 0.18);
 
-	--ease: cubic-bezier(0.22, 1, 0.36, 1);
-	--ease-quick: cubic-bezier(0.4, 0, 0.2, 1);
+	/* Layers, bottom to top. Every layer the app itself draws is named here; a
+	   component stacking its own children uses small local numbers (1–6)
+	   instead. Not all of these share a stacking context (the minimap, the Run
+	   label and the card composer live in tldraw's in-front layer; the top-bar
+	   popovers inside the top bar), so the order matters within each one —
+	   and these values keep every one of those orders as it was tuned. */
+	--z-minimap: 30;
+	--z-split-handle: 32;
+	--z-omnibox: 35; /* the toolbar + omnibox stack */
+	--z-browser-window: 38;
+	--z-rail: 40;
+	--z-float: 45; /* the collapsed-canvas tab, the card AI composer */
+	--z-drawer: 50;
+	--z-popover: 60; /* top-bar popovers, the Run label, URL suggestions */
+	--z-finder: 70;
+	--z-topbar: 80;
+	--z-palette: 90; /* the slash palette, the toolbar's group popovers */
+	--z-tooltip: 95;
+	--z-toast: 100;
+	--z-tooltip-portal: 400; /* <Tip>, portalled to <body>: above all of the above */
+	--z-above-agentation: 100002; /* agentation's own popup sits at 100001 */
+
+	/* Motion curves, from Emil Kowalski's set. --ease is the strong ease-out
+	   that every entrance and exit uses. --ease-quick is for hover and colour
+	   changes, where the built-in `ease` is the right curve. --ease-in-out is
+	   for something travelling across the screen. */
+	--ease: cubic-bezier(0.23, 1, 0.32, 1);
+	--ease-quick: ease;
+	--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
 	/* Semantic names read by shadcn/ui + AI Elements. Declared here (and
 	   re-declared in the dark block) rather than left to Tailwind's @theme
@@ -100,6 +144,8 @@
    Dark theme — the same token names, remapped (toggle in the topbar)
    ========================================================================== */
 [data-kane-theme='dark'] {
+	/* native controls and scrollbars follow the theme, not the OS */
+	color-scheme: dark;
 	--white: #15181e;
 	--gray-50: #1b2027;
 	--gray-100: #222831;
@@ -120,11 +166,13 @@
 	--green: #57ab5a;
 	--green-hover: #64b968;
 	--green-soft: #1b2e21;
+	--green-text: #57ab5a;
 	--red: #e5534b;
 	--red-soft: #3d2426;
 	--amber: #c69026;
 	--amber-soft: #33291a;
 	--purple: #b083f0;
+	--purple-text: #b083f0;
 	--orange: #e8843c;
 
 	--shadow-panel: -8px 0 24px rgba(0, 0, 0, 0.4);
@@ -151,6 +199,7 @@
 	--color-border: var(--gray-200);
 	--color-input: var(--gray-200);
 	--color-ring: var(--blue);
+	--text-placeholder: var(--gray-500);
 }
 
 /* ============================================================================
@@ -214,6 +263,9 @@
 	--radius-pill: var(--r-pill);
 	--ease-kane: var(--ease);
 	--ease-kane-quick: var(--ease-quick);
+	/* shadcn/ui and AI Elements transition hovers through Tailwind's default
+	   curve; point it at Kane's, so every hover in the app eases one way. */
+	--default-transition-timing-function: var(--ease-quick);
 	--shadow-pop: var(--shadow-pop);
 	--shadow-panel: var(--shadow-panel);
 	--shadow-window: var(--shadow-window);
@@ -334,10 +386,14 @@
 	}
 }
 
-/* Smooth theme + interaction transitions (kept off transforms). */
+/* Smooth theme + interaction transitions (kept off transforms), plus `scale`
+   for press feedback (see "Press feedback"). Inside :where(), so this is only
+   a default. At full specificity it used to beat the components' own
+   transitions: the toolbar's reveal never ran, and the composer and the
+   segmented control lost their own timings. */
 .kane-app,
 .kane-app
-	:is(
+	:where(
 		.topbar,
 		.rightbar,
 		.drawer,
@@ -364,7 +420,27 @@
 		background-color 0.22s var(--ease-quick),
 		color 0.22s var(--ease-quick),
 		border-color 0.22s var(--ease-quick),
-		box-shadow 0.22s var(--ease-quick);
+		box-shadow 0.22s var(--ease-quick),
+		scale 0.16s var(--ease);
+}
+
+/* Press feedback: a control gives a little under the pointer (0.97 over
+   160ms). `scale`, not `transform`, so it composes with any transform the
+   control already has; each one lists `scale` in its own transition. Run steps
+   presses through Motion instead (RunStepsButton): its width springs with a
+   layout animation, which a CSS scale would throw off mid-measure. */
+:is(
+		.btn:not(.run-steps),
+		.icon-btn,
+		.side-btn,
+		.seg-btn,
+		.NodeSegmentedRow-option,
+		.CardAction,
+		.RunCursor-play,
+		.stat-chip_button,
+		.rec-toggle
+	):active:not(:disabled) {
+	scale: 0.97;
 }
 
 * {
@@ -388,6 +464,93 @@ body {
 
 button {
 	font-family: inherit;
+}
+
+/* Prose breaks like prose: no single word stranded alone on the last line. */
+p,
+li {
+	text-wrap: pretty;
+}
+/* Short multi-line labels (a wrapped tooltip, a toast, a panel title) read
+   better split into even lines than left ragged. */
+.tooltip_wrap,
+.toast,
+.drawer-title {
+	text-wrap: balance;
+}
+
+/* ---- Browser surfaces ------------------------------------------------------
+   Selection, the caret, scrollbars, focus rings and link underlines all ship
+   with platform defaults that belong to no design system. Themed here from the
+   palette, so the parts the browser draws read as part of the product. */
+::selection {
+	background: color-mix(in srgb, var(--blue) 24%, transparent);
+}
+input,
+textarea {
+	caret-color: var(--blue);
+}
+/* `scrollbar-color` inherits, so it is set where the theme tokens live (the
+   dark theme redefines --gray-300 on .kane-app); `scrollbar-width` does not
+   inherit, so it goes on every element. */
+body,
+.kane-app {
+	scrollbar-color: var(--gray-300) transparent;
+}
+* {
+	scrollbar-width: thin;
+}
+/* One focus ring for every control that doesn't draw its own. :where() keeps
+   it at zero specificity, so any component's own focus style still wins; the
+   canvas itself is excluded, or focusing it would ring the whole viewport. */
+:where(button, a, summary, [role='button'], [role='tab'], [role='menuitem'], [tabindex]):not(
+		.tl-container,
+		.tl-canvas
+	):focus-visible {
+	outline: 2px solid var(--blue);
+	outline-offset: 2px;
+}
+/* tldraw's base CSS sets `outline: none` on everything inside the canvas
+   (`.tl-container *`), which out-specifies the ring above. Kane's own controls
+   drawn inside the canvas — the cards, the Run label, the card AI composer,
+   the finder — get it back explicitly; tldraw's own buttons keep its ring. */
+.tl-container
+	:is(.NodeShape, .RunCursor, .CardAiPopover, .KaneFinder, .kane-minimap)
+	:is(button, a, summary, [role='button'], [role='tab'], [tabindex]):focus-visible {
+	outline: 2px solid var(--blue);
+	outline-offset: 2px;
+}
+a {
+	text-underline-offset: 0.2em;
+	text-decoration-thickness: 1px;
+}
+/* The three inputs that turned off the outline without drawing a focus state
+   of their own. */
+.devtools-filter:focus,
+.share-link:focus,
+.CardPanel-setting select:focus {
+	border-color: var(--blue);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 16%, transparent);
+}
+/* Skip link: the first stop for a keyboard user, out of sight until focused,
+   and it jumps past the top bar's controls to the canvas. It appears without
+   an entrance, because a keystroke brought it. */
+.skip-link {
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	z-index: var(--z-tooltip-portal);
+	padding: 8px 12px;
+	border-radius: var(--r-md);
+	background: var(--gray-900);
+	color: var(--white);
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+	translate: 0 -200%;
+}
+.skip-link:focus-visible {
+	translate: 0 0;
 }
 
 /* ============================================================================
@@ -416,15 +579,16 @@ button {
 	overflow: hidden;
 	display: flex;
 }
+/* The skip link's target: focus lands here so the next Tab starts inside the
+   work area. A ring round the whole region would say nothing. */
+.kane-work:focus {
+	outline: none;
+}
 
 .kane-canvas-col {
 	position: relative;
 	flex: 1 1 auto;
 	min-width: 0;
-	transition: width 0.26s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.kane-canvas-col.dragging {
-	transition: none;
 }
 .kane-canvas-col.is-split {
 	flex: 0 0 auto;
@@ -469,10 +633,16 @@ button {
 	overflow: hidden;
 	pointer-events: none;
 	opacity: 0.75;
+	/* Longer than any UI timing on purpose: a slow swell while the agent works,
+	   not a response to anything the user did. */
 	transition: opacity 0.6s var(--ease-quick);
 }
 .kane-ambient[data-busy='true'] {
 	opacity: 1;
+}
+.kane-ambient-mesh {
+	width: 100%;
+	height: 100%;
 }
 .kane-canvas-col > .tl-container,
 .kane-canvas-col .tl-container {
@@ -499,7 +669,7 @@ button {
 	/* Above every canvas-column overlay (mode cluster 40, drawer 50, finder 70)
 	   so the topbar's own popovers — file info, account menu — are not painted
 	   over by them. Toasts (100) still win, which is correct. */
-	z-index: 80;
+	z-index: var(--z-topbar);
 	position: relative;
 }
 .topbar .spacer {
@@ -522,10 +692,20 @@ button {
 .kane-logo-mark {
 	display: block;
 }
+/* The name is what gives when the bar runs short (Stop and Pause both appear
+   once a run starts): it truncates, rather than the avatar sliding off the
+   right edge. */
 .filename-wrap {
 	display: inline-flex;
 	align-items: center;
+	min-width: 0;
 	max-width: 300px;
+}
+/* the name's tooltip anchor sits between the two, and must give way too
+   (anchors are otherwise flex: 0 0 auto, so they never change a layout) */
+.filename-wrap > .tip-anchor {
+	flex-shrink: 1;
+	min-width: 0;
 }
 .filename {
 	font-size: 14px;
@@ -565,7 +745,10 @@ button {
 	border-radius: var(--r-sm);
 	cursor: pointer;
 	padding: 6px;
-	transition: background 0.12s ease, color 0.12s ease;
+	transition:
+		background 0.12s var(--ease-quick),
+		color 0.12s var(--ease-quick),
+		scale 0.16s var(--ease);
 }
 .icon-btn:hover {
 	background: var(--gray-100);
@@ -577,6 +760,10 @@ button {
 .icon-btn.is-active {
 	background: var(--gray-150);
 	color: var(--gray-900);
+}
+/* inside a chip or a field, where the usual 6px would crowd it */
+.icon-btn_tight {
+	padding: 2px;
 }
 .icon-btn:disabled {
 	color: var(--gray-300);
@@ -661,16 +848,59 @@ button {
 	border: 1px solid var(--gray-200);
 	border-radius: var(--r-md);
 	box-shadow: var(--shadow-pop);
-	z-index: 60;
+	z-index: var(--z-popover);
+}
+/* what a top-bar popover hangs from: the control's wrapper */
+.popover-anchor {
+	position: relative;
 }
 .popover-caret {
 	position: absolute;
+	top: -6px;
 	width: 12px;
 	height: 12px;
 	background: var(--white);
 	border-left: 1px solid var(--gray-200);
 	border-top: 1px solid var(--gray-200);
 	transform: rotate(45deg);
+}
+/* The top bar's popovers hang just under the bar from the control that opened
+   them. The caret points at that control and the popover grows out of the same
+   point: --caret is the caret's distance from the popover's near edge, and the
+   7px is half the caret plus the popover's border. */
+.save-popover,
+.share-popover,
+.info-popover,
+.popover.menu {
+	top: calc(var(--topbar-h) - 6px);
+}
+.save-popover {
+	--caret: 26px;
+}
+.share-popover {
+	--caret: 14px;
+}
+.save-popover,
+.share-popover {
+	right: 0;
+	transform-origin: calc(100% - var(--caret) - 7px) 0;
+}
+.save-popover .popover-caret,
+.share-popover .popover-caret {
+	right: var(--caret);
+}
+.info-popover {
+	--caret: 20px;
+	left: 0;
+	transform-origin: calc(var(--caret) + 7px) 0;
+}
+.info-popover .popover-caret {
+	left: var(--caret);
+}
+/* the account menu has no caret; it grows from the middle of the avatar */
+.popover.menu {
+	right: 0;
+	transform-origin: calc(100% - 16px) 0;
 }
 .info-popover {
 	/* wide enough for the three priority segments to sit on one row */
@@ -685,7 +915,7 @@ button {
 .info-label {
 	font-size: 11px;
 	font-weight: 700;
-	color: var(--gray-400);
+	color: var(--gray-500);
 	margin-bottom: 2px;
 }
 .info-value {
@@ -729,7 +959,7 @@ button {
 	font-weight: 700;
 	letter-spacing: 0.02em;
 	text-transform: uppercase;
-	color: var(--gray-400);
+	color: var(--gray-500);
 	padding: 8px 10px 4px;
 }
 .tooltip {
@@ -742,13 +972,20 @@ button {
 	border-radius: var(--r-sm);
 	white-space: nowrap;
 	pointer-events: none;
-	z-index: 95;
-	animation: pop-in 0.14s var(--ease);
+	z-index: var(--z-tooltip);
+	--pop-from: 0.97;
+	animation: pop-in 0.125s var(--ease);
+}
+/* A neighbour of a tip that was just open, or a tip keyboard focus brought
+   up, is simply there — see SKIP_DELAY_MS in Tooltip.tsx. */
+.tooltip[data-instant] {
+	animation: none;
 }
 /* Centring uses the independent `translate` property, not `transform`: the
    `pop-in` entrance animates `transform`, which would otherwise override the
-   positioning for the whole 140ms and drop the tip half a width off its
-   control. The two compose — `translate` places it, `transform` animates it.
+   positioning while it runs and drop the tip half a width off its control.
+   The two compose — `translate` places it, `transform` animates it. Each side
+   grows out of the edge facing its control.
 
    These four sides are for the handful of tips positioned by CSS against their
    own anchor (the right bar, the collapsed-canvas chip). Everything that comes
@@ -758,21 +995,25 @@ button {
 	right: calc(100% + 8px);
 	top: 50%;
 	translate: 0 -50%;
+	transform-origin: right center;
 }
 .tooltip.right {
 	left: calc(100% + 8px);
 	top: 50%;
 	translate: 0 -50%;
+	transform-origin: left center;
 }
 .tooltip.bottom {
 	top: calc(100% + 8px);
 	left: 50%;
 	translate: -50% 0;
+	transform-origin: center top;
 }
 .tooltip.top {
 	bottom: calc(100% + 8px);
 	left: 50%;
 	translate: -50% 0;
+	transform-origin: center bottom;
 }
 /* A <Tip> tooltip: outside every clipping ancestor, placed in viewport
    coordinates, and above all of the app's own layers (the highest of which is
@@ -780,7 +1021,19 @@ button {
 .tooltip.tooltip_fixed {
 	position: fixed;
 	translate: none;
-	z-index: 400;
+	z-index: var(--z-tooltip-portal);
+}
+.tooltip_fixed[data-side='top'] {
+	transform-origin: center bottom;
+}
+.tooltip_fixed[data-side='bottom'] {
+	transform-origin: center top;
+}
+.tooltip_fixed[data-side='left'] {
+	transform-origin: right center;
+}
+.tooltip_fixed[data-side='right'] {
+	transform-origin: left center;
 }
 /* A sentence-long hint would otherwise run off the edge of the window. */
 .tooltip_wrap {
@@ -812,7 +1065,11 @@ button {
 	align-items: center;
 	padding: 8px 0;
 	gap: 8px;
-	z-index: 40;
+	z-index: var(--z-rail);
+}
+/* each button's wrapper: what its left-hand tooltip hangs from */
+.rb-btn-wrap {
+	position: relative;
 }
 .rightbar .group {
 	display: flex;
@@ -837,7 +1094,7 @@ button {
 	background: var(--white);
 	box-shadow: var(--shadow-panel);
 	border-left: 1px solid var(--gray-200);
-	z-index: 50;
+	z-index: var(--z-drawer);
 	display: flex;
 	flex-direction: column;
 	/* Motion owns the slide, in and out — see Drawer.tsx */
@@ -865,6 +1122,13 @@ button {
 	flex: 1 1 auto;
 	overflow-y: auto;
 	padding: 8px;
+}
+/* a panel that isn't designed yet says so */
+.drawer-pending {
+	padding: 24px;
+	color: var(--gray-500);
+	font-size: 13px;
+	text-align: center;
 }
 /* A library module carries enough detail to choose between two similar ones,
    so the row is three lines and the drawer is widened to hold them. */
@@ -920,11 +1184,12 @@ button {
 	white-space: nowrap;
 }
 .m-version {
+	font-variant-numeric: tabular-nums;
 	flex: 0 0 auto;
 	padding: 1px 6px;
 	border-radius: var(--r-pill);
 	background: var(--gray-100);
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	font-size: 10.5px;
 	font-weight: 600;
 	color: var(--gray-600);
@@ -950,7 +1215,7 @@ button {
 }
 .m-automation.is-auto {
 	background: var(--green-soft);
-	color: var(--green);
+	color: var(--green-text);
 }
 .m-automation.is-manual {
 	background: var(--amber-soft);
@@ -976,8 +1241,8 @@ button {
 	color: var(--gray-300);
 }
 .module-row .m-updated {
-	font-size: 11.5px;
-	color: var(--gray-400);
+	font-size: 12px;
+	color: var(--gray-500);
 }
 
 /* ============================================================================
@@ -1029,7 +1294,11 @@ button {
 	font-weight: 600;
 	color: var(--gray-600);
 	cursor: pointer;
-	transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+	transition:
+		background 0.15s var(--ease-quick),
+		color 0.15s var(--ease-quick),
+		box-shadow 0.15s var(--ease-quick),
+		scale 0.16s var(--ease);
 }
 .seg-btn.is-selected {
 	background: var(--white);
@@ -1109,11 +1378,12 @@ button {
 	cursor: grab;
 	user-select: none;
 	pointer-events: all;
-	z-index: 60;
+	z-index: var(--z-popover);
 	white-space: nowrap;
 }
+/* hopping to the next card is travel across the screen, not an arrival */
 .RunCursor[data-moving='false'] {
-	transition: transform 0.22s var(--ease);
+	transition: transform 0.22s var(--ease-in-out);
 }
 .RunCursor:active {
 	cursor: grabbing;
@@ -1141,11 +1411,26 @@ button {
 	background: rgba(255, 255, 255, 0.22);
 	color: #fff;
 	cursor: pointer;
-	transition: background 0.15s var(--ease-quick), transform 0.15s var(--ease-quick);
+	transition:
+		background 0.15s var(--ease-quick),
+		transform 0.15s var(--ease-quick),
+		scale 0.16s var(--ease);
 }
 .RunCursor-play:hover {
 	background: rgba(255, 255, 255, 0.38);
-	transform: scale(1.08);
+}
+/* Hover motion only where there is a hovering pointer: a tap fires a false
+   hover that would stick. */
+@media (hover: hover) and (pointer: fine) {
+	.RunCursor-play:hover {
+		transform: scale(1.08);
+	}
+}
+/* A triangle's centroid sits left of its bounding-box centre: for lucide's
+   Play (6,3 → 20,12 → 6,21) that's 1.33 of 24 units, so 0.6px at this size
+   puts it optically centred in the circle. */
+.RunCursor-play-glyph {
+	margin-left: 0.6px;
 }
 .RunCursor_running {
 	background: var(--green);
@@ -1216,7 +1501,8 @@ button {
 }
 .NodeShape .NodeShape-output {
 	font-variant-numeric: tabular-nums;
-	font-size: 11px;
+	/* a value the card holds is content, and content stays at 12px or above */
+	font-size: 12px;
 	color: var(--gray-500);
 	max-width: 80px;
 	overflow: hidden;
@@ -1228,10 +1514,12 @@ button {
 	pointer-events: all;
 }
 
+/* The running card: a blue ring, and lifted off the canvas by a blue-cast
+   shadow that falls below it — depth, rather than a glow all round. */
 .NodeShape.NodeShape_executing {
 	box-shadow:
 		0 0 0 calc(2px / var(--tl-zoom)) var(--blue),
-		0 0 12px rgba(10, 105, 218, 0.25),
+		0 4px 14px rgba(10, 105, 218, 0.16),
 		0 1px 2px rgba(31, 35, 40, 0.06);
 }
 
@@ -1266,7 +1554,7 @@ button {
 	border-color: var(--blue);
 }
 .NodeRow input::placeholder {
-	color: var(--gray-400);
+	color: var(--text-placeholder);
 }
 
 .NodeInputRow-label {
@@ -1277,7 +1565,7 @@ button {
 	min-width: 44px;
 }
 .NodeRow-connected-value {
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--green);
 	font-weight: 600;
 	flex: 1 1 auto;
@@ -1287,7 +1575,7 @@ button {
 	white-space: nowrap;
 }
 .NodeRow-disconnected {
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--gray-500);
 	opacity: 0.6;
 	flex: 1 1 auto;
@@ -1343,7 +1631,10 @@ button {
 }
 .NodeSegmentedRow-option {
 	height: 22px;
-	padding: 0 10px;
+	/* 7px, not 10: at 10 the API card's five methods (GET … DELETE) needed
+	   261px of a 236px row and ran off the card. One padding for every in-card
+	   segmented control, so no card needs its own override to fit. */
+	padding: 0 7px;
 	border: none;
 	background: transparent;
 	border-radius: 4px;
@@ -1351,6 +1642,11 @@ button {
 	font-weight: 600;
 	color: var(--gray-600);
 	cursor: pointer;
+	transition:
+		background 0.15s var(--ease-quick),
+		color 0.15s var(--ease-quick),
+		box-shadow 0.15s var(--ease-quick),
+		scale 0.16s var(--ease);
 }
 .NodeSegmentedRow-option_active {
 	background: var(--white);
@@ -1359,12 +1655,13 @@ button {
 }
 
 /* If/Else + While rows */
-.IfElseNode-row {
-	border-left: 2px solid transparent;
-}
+/* The branch a run took reads as a tinted band with a hairline, not a thick
+   stripe down one side (a side-tab is the classic template tell). Both are
+   drawn with background and an inset shadow, so nothing shifts the row's
+   contents the way the old 2px reserved border did on every branch. */
 .IfElseNode-row_taken {
-	border-left-color: var(--green);
-	background: rgba(31, 136, 61, 0.05);
+	background: color-mix(in srgb, var(--green) 7%, transparent);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 28%, transparent);
 }
 .IfElseNode-chip {
 	flex: 0 0 auto;
@@ -1410,12 +1707,13 @@ button {
 }
 .IfElseNode-else-hint {
 	flex: 1 1 auto;
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--gray-500);
 	font-style: italic;
 }
 .TotpCodeRow-code {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-variant-numeric: tabular-nums;
+	font-family: var(--font-mono);
 	font-size: 15px;
 	font-weight: 700;
 	letter-spacing: 0.06em;
@@ -1619,16 +1917,25 @@ button {
 	left: 6px;
 	bottom: 5px;
 	max-width: calc(100% - 12px);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	font-size: 9px;
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	font-size: 11px;
 	font-weight: 700;
 	color: var(--blue-600);
 	background: var(--blue-soft);
 	border: 1px solid var(--blue);
 	border-radius: 999px;
-	padding: 1px 6px;
+	padding: 1px 6px 1px 5px;
+}
+.CardShot-target svg {
+	flex: none;
+}
+.CardShot-target-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 /* ---- Ports ---- */
@@ -1649,12 +1956,14 @@ button {
 [data-state='select.idle'] .Port {
 	pointer-events: all;
 }
+/* Highlighted ports get a crisp, translucent outer ring rather than a blurred
+   glow: a target with an edge reads as one. */
 .Port.Port_hinting {
 	transform: scale(1.3);
 	box-shadow:
 		0 0 0 2px var(--white),
 		0 0 0 3px var(--port-color, var(--blue)),
-		0 0 8px var(--port-color, var(--blue));
+		0 0 0 6px color-mix(in srgb, var(--port-color, var(--blue)) 22%, transparent);
 }
 .Port.Port_end {
 	left: -6px;
@@ -1666,7 +1975,7 @@ button {
 	box-shadow:
 		0 0 0 2px var(--white),
 		0 0 0 3px var(--port-color, rgba(0, 0, 0, 0.15)),
-		0 0 4px var(--port-color, var(--blue));
+		0 0 0 5px color-mix(in srgb, var(--port-color, var(--blue)) 16%, transparent);
 }
 .NodeShape-heading > .Port {
 	top: 14px;
@@ -1773,7 +2082,7 @@ button {
 	backdrop-filter: blur(2px);
 	border: 1px solid var(--gray-300);
 	overflow: hidden;
-	z-index: 30;
+	z-index: var(--z-minimap);
 	box-shadow: 0 1px 2px rgba(31, 35, 40, 0.06);
 	pointer-events: all;
 }
@@ -1826,7 +2135,7 @@ button {
 	flex-direction: column;
 	align-items: flex-start;
 	gap: 10px;
-	z-index: 35;
+	z-index: var(--z-omnibox);
 	pointer-events: none;
 }
 .kane-left-stack > * {
@@ -1879,12 +2188,12 @@ button {
 	transition: opacity 0.2s var(--ease-quick);
 }
 
-/* while the agent is thinking/building */
+/* While the agent is thinking or building: the violet border and ring say so.
+   No glow around it — the shimmer and the ambient shader already move. */
 .agent-panel.is-thinking {
 	border-color: rgba(130, 80, 223, 0.55);
 	box-shadow:
 		0 0 0 3px rgba(130, 80, 223, 0.14),
-		0 0 22px rgba(130, 80, 223, 0.18),
 		0 8px 26px rgba(31, 35, 40, 0.12);
 }
 
@@ -1928,9 +2237,11 @@ button {
 	font-weight: 600;
 	color: var(--gray-900);
 	padding: 8px 10px;
-	background: var(--gray-50);
-	border: 1px solid var(--gray-150);
-	border-left: 3px solid var(--purple);
+	/* The objective as sent, tinted toward the agent's colour rather than
+	   flagged with a thick side bar: a one-sided accent stripe is the most
+	   recognisable template tell there is (impeccable side-tab). */
+	background: color-mix(in srgb, var(--purple) 5%, var(--white));
+	border: 1px solid color-mix(in srgb, var(--purple) 16%, var(--gray-150));
 	border-radius: var(--r-md);
 	word-wrap: break-word;
 }
@@ -1969,7 +2280,7 @@ button {
 }
 .run-reasoning [data-slot='collapsible-trigger'],
 .run-reasoning > button {
-	font-size: 11.5px;
+	font-size: 12px;
 }
 /* Streamdown renders the notes as markdown — keep it at composer scale, and
    let a long train of thought scroll inside itself rather than push the task
@@ -1996,7 +2307,7 @@ button {
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
-	font-size: 11.5px;
+	font-size: 12px;
 }
 .run-task > [data-slot='collapsible-content'] {
 	flex: 0 1 auto;
@@ -2034,7 +2345,7 @@ button {
 	gap: 7px;
 	min-width: 0;
 	padding: 3px 0;
-	font-size: 11.5px;
+	font-size: 12px;
 }
 .task-step-dot {
 	flex: 0 0 auto;
@@ -2064,7 +2375,7 @@ button {
 }
 .task-step-tool {
 	flex: 0 0 auto;
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	font-size: 10.5px;
 	font-weight: 600;
 	color: var(--gray-700);
@@ -2074,14 +2385,14 @@ button {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 10.5px;
+	font-size: 12px;
 	color: var(--gray-600);
 }
 .task-step-ms {
 	margin-left: auto;
 	flex: 0 0 auto;
 	font-size: 10px;
-	color: var(--gray-400);
+	color: var(--gray-500);
 	font-variant-numeric: tabular-nums;
 }
 
@@ -2116,7 +2427,7 @@ button {
 	font-size: 12.5px;
 }
 .run-plan [data-slot='card-description'] {
-	font-size: 11px;
+	font-size: 12px;
 }
 /* the collapse toggle is a size-8 button; trim it to the header's rhythm */
 .run-plan [data-slot='card-header'] button {
@@ -2130,13 +2441,13 @@ button {
 	display: flex;
 	flex-direction: column;
 	gap: 3px;
-	font-size: 11.5px;
+	font-size: 12px;
 	line-height: 1.45;
 	color: var(--gray-600);
 	list-style: decimal;
 }
 .run-checkpoint {
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: 600;
 	letter-spacing: 0.01em;
 	color: var(--green);
@@ -2157,12 +2468,12 @@ button {
 	min-width: 0;
 }
 .run-suggestions button {
-	font-size: 11.5px;
+	font-size: 12px;
 	white-space: nowrap;
 }
 .run-queue {
 	padding: 8px 12px 0;
-	font-size: 11.5px;
+	font-size: 12px;
 }
 
 /* Status and priority in the info popover — dropdowns that open on whatever is
@@ -2198,6 +2509,7 @@ button {
 
 /* Test case id + version — a saved case identifies itself in the topbar … */
 .tc-badge {
+	font-variant-numeric: tabular-nums;
 	display: inline-flex;
 	align-items: center;
 	gap: 7px;
@@ -2214,7 +2526,7 @@ button {
 	white-space: nowrap;
 }
 .tc-badge-id {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	letter-spacing: 0.01em;
 	color: var(--gray-700);
 }
@@ -2223,8 +2535,10 @@ button {
 	height: 11px;
 	background: var(--gray-200);
 }
+/* One step lighter than the id (gray-700), not two: gray-500 on this gray-50
+   pill measured 4.3:1, under the 4.5:1 floor for text this size. */
 .tc-badge-version {
-	color: var(--gray-500);
+	color: var(--gray-600);
 }
 /* … and again, in full, at the top of the info popover. */
 .info-identity {
@@ -2236,7 +2550,7 @@ button {
 	border-bottom: 1px solid var(--gray-150);
 }
 .info-tc-id {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	font-size: 15px;
 	font-weight: 600;
 	color: var(--gray-900);
@@ -2410,14 +2724,14 @@ button {
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow: auto;
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 }
 .devtools-empty {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	padding: 14px;
-	color: var(--gray-400);
+	color: var(--gray-500);
 	font-family: var(--font-sans);
 }
 .console-row {
@@ -2434,7 +2748,7 @@ button {
 	font-size: 9.5px;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
-	color: var(--gray-400);
+	color: var(--gray-500);
 }
 .console-text {
 	flex: 1 1 auto;
@@ -2442,8 +2756,9 @@ button {
 	word-break: break-word;
 }
 .console-time {
+	font-variant-numeric: tabular-nums;
 	flex: 0 0 auto;
-	color: var(--gray-400);
+	color: var(--gray-500);
 	font-size: 10px;
 }
 .console-row_warn {
@@ -2491,6 +2806,7 @@ button {
 	display: none;
 }
 .net-table {
+	font-variant-numeric: tabular-nums;
 	width: 100%;
 	border-collapse: collapse;
 }
@@ -2504,7 +2820,8 @@ button {
 	font-size: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.03em;
-	color: var(--gray-500);
+	/* gray-600 on the gray-50 strip: gray-500 managed only 4.3:1 there */
+	color: var(--gray-600);
 	background: var(--gray-50);
 	padding: 0 8px;
 	border-bottom: 1px solid var(--gray-200);
@@ -2615,8 +2932,7 @@ button {
 	align-items: center;
 	gap: 4px;
 	padding: 5px 8px;
-	font-family:
-		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	font-family: var(--font-sans);
 	font-size: 11.5px;
 	font-weight: 600;
 	color: var(--gray-900);
@@ -2631,7 +2947,7 @@ button {
 .net-section-caret {
 	flex: 0 0 auto;
 	color: var(--gray-500);
-	transition: transform 0.15s var(--ease-quick);
+	transition: transform 0.15s var(--ease);
 }
 .net-section[open] > .net-section-title .net-section-caret {
 	transform: rotate(90deg);
@@ -2663,7 +2979,7 @@ button {
 }
 .net-section-empty {
 	padding: 2px 8px 10px 20px;
-	color: var(--gray-400);
+	color: var(--gray-500);
 	font-style: italic;
 }
 .net-body {
@@ -2677,6 +2993,7 @@ button {
 	word-break: break-word;
 }
 .devtools-status {
+	font-variant-numeric: tabular-nums;
 	flex: 0 0 auto;
 	height: 22px;
 	display: flex;
@@ -2684,7 +3001,7 @@ button {
 	padding: 0 8px;
 	border-top: 1px solid var(--gray-200);
 	background: var(--gray-50);
-	color: var(--gray-500);
+	color: var(--gray-600);
 	font-size: 10.5px;
 }
 
@@ -2735,8 +3052,9 @@ button {
 	border-radius: var(--r-md);
 	box-shadow: var(--shadow-pop);
 	padding: 4px;
-	z-index: 90;
-	animation: pop-in 0.16s var(--ease);
+	z-index: var(--z-palette);
+	/* A command palette opens instantly. It is summoned by a keystroke many
+	   times a session, and an entrance on that is delay, not polish. */
 }
 
 /* composer = the omnibox input area */
@@ -2790,7 +3108,7 @@ button {
 	padding: 0;
 }
 .omni-textarea::placeholder {
-	color: var(--gray-400);
+	color: var(--text-placeholder);
 }
 .omni-text-stack {
 	position: relative;
@@ -2851,30 +3169,6 @@ button {
 	white-space: nowrap;
 }
 
-.send-btn {
-	width: 32px;
-	height: 32px;
-	border-radius: 50%;
-	border: none;
-	background: linear-gradient(135deg, var(--blue), var(--purple));
-	color: #fff;
-	display: grid;
-	place-items: center;
-	cursor: pointer;
-	flex: 0 0 auto;
-	transition:
-		filter 0.15s var(--ease-quick),
-		transform 0.15s var(--ease-quick);
-}
-.send-btn:hover:not(:disabled) {
-	filter: brightness(1.08);
-	transform: translateY(-1px);
-}
-.send-btn:disabled {
-	background: var(--gray-300);
-	cursor: not-allowed;
-}
-
 .dropzone {
 	position: absolute;
 	inset: 0;
@@ -2890,55 +3184,19 @@ button {
 	pointer-events: none;
 }
 
-.cmd-popover {
-	position: absolute;
-	width: 240px;
-	bottom: calc(100% + 8px);
-	left: 0;
-	background: var(--white);
-	border: 1px solid var(--gray-200);
-	border-radius: var(--r-md);
-	box-shadow: var(--shadow-pop);
-	padding: 6px;
-	z-index: 90;
-	max-height: 320px;
-	overflow-y: auto;
-	animation: pop-in 0.16s var(--ease);
-}
+/* Popovers and tooltips scale out of the control that opened them rather than
+   out of thin air: each sets transform-origin to its trigger's side, and how
+   small it starts in --pop-from (popovers 0.95, tooltips 0.97). Whatever uses
+   this keeps its position on `translate`, `left` or `top`, never `transform`,
+   which the animation owns while it runs. */
 @keyframes pop-in {
 	from {
 		opacity: 0;
-		transform: translateY(5px) scale(0.98);
-	}
-	to {
-		opacity: 1;
-		transform: none;
+		transform: scale(var(--pop-from, 0.95));
 	}
 }
-.popover,
-.url-autocomplete,
-.menu {
+.popover {
 	animation: pop-in 0.16s var(--ease);
-}
-.cmd-search {
-	width: 100%;
-	height: 30px;
-	border: 1px solid var(--gray-200);
-	border-radius: var(--r-sm);
-	padding: 0 8px;
-	font-family: inherit;
-	font-size: 13px;
-	outline: none;
-	margin-bottom: 6px;
-}
-.plus-search {
-	flex: 1 1 auto;
-	min-width: 0;
-	border: none;
-	outline: none;
-	font-family: inherit;
-	font-size: 13px;
-	background: transparent;
 }
 .cmd-item {
 	display: flex;
@@ -2967,11 +3225,13 @@ button {
 /* ============================================================================
    Toast
    ========================================================================== */
+/* Under the top bar and clear of the right rail: a toast must never sit on top
+   of Run steps, Save or the panel buttons for the three seconds it is up. */
 .toast-wrap {
 	position: fixed;
-	top: 16px;
-	right: 16px;
-	z-index: 100;
+	top: calc(var(--topbar-h) + 12px);
+	right: calc(var(--rightbar-w) + 12px);
+	z-index: var(--z-toast);
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
@@ -2986,7 +3246,26 @@ button {
 	padding: 10px 12px;
 	border-radius: var(--r-md);
 	box-shadow: var(--shadow-pop);
-	animation: toast-in 0.18s ease;
+	/* enters and leaves through Motion (Toast.tsx) */
+}
+/* The dismiss button sits on the dark toast, so it can't use .icon-btn's
+   light hover: white on that is invisible. */
+.toast .toast-dismiss {
+	color: rgba(255, 255, 255, 0.72);
+}
+.toast .toast-dismiss:hover {
+	background: rgba(255, 255, 255, 0.14);
+	color: #fff;
+}
+.toast .toast-dismiss:active {
+	background: rgba(255, 255, 255, 0.2);
+}
+/* A finished run's toast leads with its tray of landed steps (RunTray). */
+.toast-run-tray {
+	display: block;
+	flex: 0 0 auto;
+	width: 104px;
+	height: 34px;
 }
 /* The icon carries the tone — a saved objective shouldn't wear a red warning. */
 .toast .t-icon {
@@ -3001,16 +3280,6 @@ button {
 }
 .toast_error .t-icon {
 	color: #ff9a9a;
-}
-@keyframes toast-in {
-	from {
-		opacity: 0;
-		transform: translateX(12px);
-	}
-	to {
-		opacity: 1;
-		transform: translateX(0);
-	}
 }
 
 /* ============================================================================
@@ -3029,7 +3298,7 @@ button {
 	width: 1px;
 	background: var(--gray-200);
 	cursor: ew-resize;
-	z-index: 32;
+	z-index: var(--z-split-handle);
 }
 .separator-hit {
 	position: absolute;
@@ -3048,9 +3317,9 @@ button {
 	height: 200px;
 	border-radius: 999px;
 	background: var(--blue);
-	box-shadow: 0 0 8px var(--blue-glow);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 18%, transparent);
 	opacity: 0;
-	transition: opacity 0.12s ease;
+	transition: opacity 0.12s var(--ease-quick);
 	pointer-events: none;
 }
 .separator:hover .separator-glow,
@@ -3058,11 +3327,14 @@ button {
 	opacity: 1;
 }
 
+/* Peeks 18px short of the edge and slides the rest of the way out under the
+   pointer — moved with `translate`, so the slide never re-lays out the page. */
 .collapsed-indicator {
 	position: absolute;
-	left: -18px;
+	left: 0;
+	translate: -18px 0;
 	bottom: 16px;
-	z-index: 45;
+	z-index: var(--z-float);
 	display: inline-flex;
 	align-items: center;
 	justify-content: flex-end;
@@ -3075,16 +3347,22 @@ button {
 	box-shadow: 2px 2px 8px rgba(31, 35, 40, 0.08);
 	color: var(--gray-600);
 	cursor: pointer;
-	transition: left 0.16s ease;
+	transition: translate 0.16s var(--ease-quick);
 }
-.collapsed-indicator:hover {
-	left: 0;
+.collapsed-indicator:focus-visible {
+	translate: 0 0;
+}
+@media (hover: hover) and (pointer: fine) {
+	.collapsed-indicator:hover {
+		translate: 0 0;
+	}
 }
 .collapsed-indicator .tooltip {
 	opacity: 0;
-	transition: opacity 0.12s ease;
+	transition: opacity 0.12s var(--ease-quick);
 }
-.collapsed-indicator:hover .tooltip {
+.collapsed-indicator:hover .tooltip,
+.collapsed-indicator:focus-visible .tooltip {
 	opacity: 1;
 }
 
@@ -3116,7 +3394,8 @@ button {
 	box-shadow: 0 0 0 3px rgba(10, 105, 218, 0.12);
 }
 .urlbar .scheme {
-	color: var(--gray-500);
+	/* the URL bar is gray-50, where gray-500 falls short of 4.5:1 */
+	color: var(--gray-600);
 	font-size: 12.5px;
 	flex: 0 0 auto;
 }
@@ -3140,7 +3419,7 @@ button {
 	border-radius: var(--r-md);
 	box-shadow: var(--shadow-pop);
 	padding: 4px;
-	z-index: 60;
+	z-index: var(--z-popover);
 }
 .url-suggest {
 	display: flex;
@@ -3308,8 +3587,8 @@ button {
 	padding: 0 12px;
 	background: color-mix(in srgb, var(--purple) 10%, var(--white));
 	border-bottom: 1px solid color-mix(in srgb, var(--purple) 28%, transparent);
-	color: var(--purple);
-	font-size: 11.5px;
+	color: var(--purple-text);
+	font-size: 12px;
 	font-weight: 600;
 	animation: inspect-bar-in 0.18s var(--ease);
 }
@@ -3332,136 +3611,6 @@ button {
 }
 .inspect-bar-off:hover {
 	background: color-mix(in srgb, var(--purple) 14%, transparent);
-}
-.text-inspector {
-	position: absolute;
-	right: 14px;
-	top: 14px;
-	z-index: 6;
-	width: 268px;
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	padding: 12px;
-	border: 1px solid var(--gray-200);
-	border-radius: var(--r-md);
-	background: var(--white);
-	box-shadow: var(--shadow-pop);
-	animation: pop-in 0.16s var(--ease);
-}
-.ti-head {
-	display: flex;
-	align-items: center;
-	gap: 7px;
-	color: var(--purple);
-}
-.ti-title {
-	font-size: 12px;
-	font-weight: 700;
-	letter-spacing: 0.01em;
-}
-.ti-close {
-	margin-left: auto;
-	display: grid;
-	place-items: center;
-	width: 22px;
-	height: 22px;
-	padding: 0;
-	border: none;
-	border-radius: var(--r-sm);
-	background: transparent;
-	color: var(--gray-500);
-	cursor: pointer;
-}
-.ti-close:hover {
-	background: var(--gray-100);
-	color: var(--gray-900);
-}
-.ti-text {
-	max-height: 60px;
-	overflow: hidden;
-	padding: 8px 10px;
-	border-radius: var(--r-sm);
-	background: var(--gray-50);
-	border-left: 3px solid var(--purple);
-	font-size: 12px;
-	line-height: 1.4;
-	color: var(--gray-900);
-	word-break: break-word;
-}
-.ti-grid {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 5px 12px;
-}
-.ti-row {
-	display: flex;
-	flex-direction: column;
-	gap: 1px;
-	min-width: 0;
-}
-.ti-label {
-	font-size: 9.5px;
-	font-weight: 700;
-	letter-spacing: 0.03em;
-	text-transform: uppercase;
-	color: var(--gray-400);
-}
-.ti-value {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 11px;
-	color: var(--gray-800);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-.ti-selector {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	padding: 6px 6px 6px 8px;
-	border: 1px solid var(--gray-200);
-	border-radius: var(--r-sm);
-	background: var(--gray-50);
-	min-width: 0;
-}
-.ti-selector code {
-	flex: 1 1 auto;
-	min-width: 0;
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 10.5px;
-	color: var(--gray-700);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-.ti-icon-btn {
-	display: grid;
-	place-items: center;
-	width: 22px;
-	height: 22px;
-	padding: 0;
-	flex: 0 0 auto;
-	border: none;
-	border-radius: var(--r-sm);
-	background: transparent;
-	color: var(--gray-500);
-	cursor: pointer;
-}
-.ti-icon-btn:hover {
-	background: var(--gray-200);
-	color: var(--gray-900);
-}
-.ti-assert {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 6px;
-	width: 100%;
-}
-[data-kane-theme='dark'] .ti-text,
-[data-kane-theme='dark'] .ti-selector {
-	background: var(--gray-100);
 }
 
 .spinner-host {
@@ -3507,7 +3656,7 @@ button {
 	border: 1px solid var(--gray-200);
 	border-radius: var(--r-lg);
 	box-shadow: var(--shadow-window);
-	z-index: 38;
+	z-index: var(--z-browser-window);
 	overflow: hidden;
 	min-width: 480px;
 	min-height: 380px;
@@ -3633,13 +3782,15 @@ button {
 	box-shadow: var(--shadow-pop);
 	transform-origin: bottom left;
 	opacity: 0;
-	translate: 0 10px;
-	scale: 0.94;
+	/* It shows every time the omnibox takes focus, so the reveal stays short
+	   and small: a slight rise out of the omnibox, not an entrance. */
+	translate: 0 6px;
+	scale: 0.97;
 	pointer-events: none;
 	transition:
-		opacity 0.18s var(--ease-quick),
-		translate 0.24s var(--ease),
-		scale 0.24s var(--ease);
+		opacity 0.16s var(--ease),
+		translate 0.2s var(--ease),
+		scale 0.2s var(--ease);
 }
 .kane-left-stack:focus-within .KaneToolbar,
 .KaneToolbar:hover {
@@ -3648,9 +3799,9 @@ button {
 	scale: 1;
 	pointer-events: all;
 }
+/* With reduced motion it fades in where it stands. */
 @media (prefers-reduced-motion: reduce) {
 	.KaneToolbar {
-		transition-duration: 0.01ms;
 		translate: none;
 		scale: 1;
 	}
@@ -3670,7 +3821,10 @@ button {
 	color: var(--gray-600);
 	border-radius: var(--r-md);
 	cursor: pointer;
-	transition: background 0.15s var(--ease-quick), color 0.15s var(--ease-quick);
+	transition:
+		background 0.15s var(--ease-quick),
+		color 0.15s var(--ease-quick),
+		scale 0.16s var(--ease);
 }
 .side-btn:hover {
 	background: var(--gray-100);
@@ -3686,12 +3840,15 @@ button {
 	background: var(--gray-150);
 	margin: 0 4px;
 }
-/* tooltips + group popovers open above the horizontal bar */
+/* Tooltips + group popovers open above the horizontal bar. The tip is centred
+   with `translate`: with `transform`, the pop-in entrance (which animates
+   transform) knocked it half a width off its button until the animation ended. */
 .side-tooltip {
 	position: absolute;
 	bottom: calc(100% + 10px);
 	left: 50%;
-	transform: translateX(-50%);
+	translate: -50% 0;
+	transform-origin: center bottom;
 	display: inline-flex;
 	align-items: center;
 	gap: 7px;
@@ -3703,8 +3860,12 @@ button {
 	border-radius: var(--r-sm);
 	white-space: nowrap;
 	pointer-events: none;
-	z-index: 95;
-	animation: pop-in 0.14s var(--ease);
+	z-index: var(--z-tooltip);
+	--pop-from: 0.97;
+	animation: pop-in 0.125s var(--ease);
+}
+.side-tooltip[data-instant] {
+	animation: none;
 }
 .side-tooltip kbd,
 .cmd-kbd {
@@ -3717,7 +3878,8 @@ button {
 }
 .cmd-kbd {
 	margin-left: auto;
-	color: var(--gray-500);
+	/* gray-600: on the chip's grey, gray-500 managed 4:1 */
+	color: var(--gray-600);
 	background: var(--gray-100);
 }
 .side-popover {
@@ -3730,7 +3892,9 @@ button {
 	border-radius: var(--r-md);
 	box-shadow: var(--shadow-pop);
 	padding: 6px;
-	z-index: 90;
+	z-index: var(--z-palette);
+	/* grows up out of its 36px group button, which sits under its left end */
+	transform-origin: 18px 100%;
 	animation: pop-in 0.16s var(--ease);
 }
 .side-popover .cmd-item svg {
@@ -3752,19 +3916,9 @@ button {
 	border: 1px solid var(--gray-200);
 	border-radius: var(--r-lg);
 	box-shadow: var(--shadow-pop);
-	z-index: 70;
+	z-index: var(--z-finder);
 	pointer-events: all;
-	animation: finder-in 0.18s var(--ease);
-}
-@keyframes finder-in {
-	from {
-		opacity: 0;
-		transform: translate(-50%, -6px);
-	}
-	to {
-		opacity: 1;
-		transform: translate(-50%, 0);
-	}
+	/* ⌘F opens it, so it appears instantly: no entrance on a shortcut. */
 }
 .KaneFinder-icon {
 	color: var(--gray-500);
@@ -3779,10 +3933,10 @@ button {
 	color: var(--gray-900);
 }
 .KaneFinder input::placeholder {
-	color: var(--gray-400);
+	color: var(--text-placeholder);
 }
 .KaneFinder-count {
-	font-size: 11.5px;
+	font-size: 12px;
 	font-weight: 600;
 	color: var(--gray-500);
 	min-width: 34px;
@@ -3822,11 +3976,13 @@ button {
 	box-shadow: 0 2px 8px rgba(10, 105, 218, 0.2);
 }
 
-/* Error-card temporary highlight (topbar error chip) */
+/* Error-card temporary highlight (topbar error chip): the red ring beats three
+   times, with a translucent outer ring that swells and fades — crisp edges,
+   not a blurred glow. */
 .NodeShape.NodeShape_errorFlash {
 	box-shadow:
 		0 0 0 calc(2.5px / var(--tl-zoom)) var(--red),
-		0 0 16px rgba(207, 34, 46, 0.4),
+		0 0 0 calc(7px / var(--tl-zoom)) rgba(207, 34, 46, 0.18),
 		0 1px 2px rgba(31, 35, 40, 0.06);
 	animation: error-flash 0.55s ease-in-out 3;
 }
@@ -3835,13 +3991,13 @@ button {
 	100% {
 		box-shadow:
 			0 0 0 calc(2.5px / var(--tl-zoom)) var(--red),
-			0 0 16px rgba(207, 34, 46, 0.4),
+			0 0 0 calc(7px / var(--tl-zoom)) rgba(207, 34, 46, 0.18),
 			0 1px 2px rgba(31, 35, 40, 0.06);
 	}
 	50% {
 		box-shadow:
 			0 0 0 calc(1px / var(--tl-zoom)) var(--red),
-			0 0 4px rgba(207, 34, 46, 0.15),
+			0 0 0 calc(2px / var(--tl-zoom)) rgba(207, 34, 46, 0),
 			0 1px 2px rgba(31, 35, 40, 0.06);
 	}
 }
@@ -3853,14 +4009,6 @@ button {
 	box-shadow:
 		0 0 0 calc(2px / var(--tl-zoom)) var(--blue),
 		0 1px 2px rgba(31, 35, 40, 0.06);
-}
-
-/* Aceternity's GlowingEffect ships `pointer-events-none`, but that's a
-   Tailwind *utility* (layered) and unlayered card/tldraw CSS outranks it —
-   the overlay would otherwise swallow every click on a card. */
-.NodeShape-glow,
-.NodeShape-glow * {
-	pointer-events: none !important;
 }
 
 /* Inline card rename */
@@ -3981,12 +4129,12 @@ button {
 	transition: opacity 0.15s linear;
 }
 
-/* Wires being drawn by the agent: violet marching dashes + glow */
+/* Wires being drawn by the agent: violet marching dashes. (No glow: the march
+   already says the agent is at work.) */
 .ConnectionShape.ConnectionShape_aiBuilding path {
 	stroke: var(--purple);
 	stroke-dasharray: 9 7;
 	animation: ai-wire-march 0.55s linear infinite, ai-wire-in 0.25s var(--ease);
-	filter: drop-shadow(0 0 3px rgba(130, 80, 223, 0.55));
 }
 @keyframes ai-wire-march {
 	from {
@@ -4045,7 +4193,7 @@ button {
 	padding: 4px 12px 8px;
 }
 .ctx-count {
-	font-size: 11.5px;
+	font-size: 12px;
 	font-weight: 600;
 	color: var(--gray-500);
 }
@@ -4059,7 +4207,7 @@ button {
 	border-radius: var(--r-sm);
 	background: var(--white);
 	font-family: inherit;
-	font-size: 11.5px;
+	font-size: 12px;
 	font-weight: 600;
 	color: var(--gray-600);
 	cursor: pointer;
@@ -4096,7 +4244,7 @@ button {
 	border-radius: var(--r-sm);
 	background: transparent;
 	font-family: inherit;
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: 600;
 	color: var(--gray-500);
 	cursor: pointer;
@@ -4213,7 +4361,7 @@ button {
 	font-weight: 700;
 	letter-spacing: 0.02em;
 	text-transform: uppercase;
-	color: var(--gray-400);
+	color: var(--gray-500);
 }
 .code-select {
 	width: 100%;
@@ -4239,11 +4387,12 @@ button {
 	flex: 0 0 auto;
 }
 .code-progress {
+	font-variant-numeric: tabular-nums;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 11.5px;
+	font-size: 12px;
 }
 .code-empty {
 	padding: 24px 12px;
@@ -4259,7 +4408,7 @@ button {
 	border: 1px solid rgba(154, 103, 0, 0.35);
 	background: rgba(154, 103, 0, 0.09);
 	color: var(--amber);
-	font-size: 11.5px;
+	font-size: 12px;
 	line-height: 1.45;
 	animation: shot-in 0.2s var(--ease);
 }
@@ -4291,7 +4440,7 @@ button {
 	border-radius: var(--r-sm);
 	background: var(--white);
 	font-family: inherit;
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: 600;
 	color: var(--amber);
 	cursor: pointer;
@@ -4332,7 +4481,7 @@ button {
 	background: var(--gray-100);
 }
 .code-filename {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	font-size: 11px;
 	color: var(--gray-600);
 	overflow: hidden;
@@ -4407,6 +4556,13 @@ button {
 }
 .codegen-ring {
 	display: block;
+}
+/* The progress arc starts at 12 o'clock. Progress eases linearly: a fill that
+   decelerates misstates how far along the file is. */
+.codegen-ring-arc {
+	transform: rotate(-90deg);
+	transform-origin: center;
+	transition: stroke-dashoffset 0.2s linear;
 }
 
 /* ---------------------------------------------------------------------------
@@ -4498,7 +4654,7 @@ button {
 	border: 1px solid var(--gray-200);
 	border-radius: var(--r-md);
 	background: var(--white);
-	color: var(--gray-400);
+	color: var(--gray-500);
 	transition: border-color 0.15s var(--ease-quick);
 }
 .vt-search:focus-within {
@@ -4573,7 +4729,7 @@ button {
 }
 .vt-col-num {
 	width: 40px;
-	color: var(--gray-400);
+	color: var(--gray-500);
 	font-variant-numeric: tabular-nums;
 }
 .vt-col-key {
@@ -4594,7 +4750,7 @@ button {
    so it no longer stretched to the row height and its bottom border painted
    ~9px above every other column's — the row read as two different heights. */
 .vt-key {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	font-size: 12px;
 	color: var(--blue-600);
 	overflow: hidden;
@@ -4632,8 +4788,10 @@ button {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
+/* Quiet, but still text someone reads: placeholder grey clears 4.5:1, where
+   --gray-400 managed 2.6:1. */
 .vt-muted {
-	color: var(--gray-400);
+	color: var(--text-placeholder);
 }
 .vt-input {
 	width: 100%;
@@ -4649,7 +4807,7 @@ button {
 	outline: none;
 }
 .vt-key .vt-input {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	font-size: 12px;
 }
 .vt-icon-btn {
@@ -4689,7 +4847,7 @@ button {
 	padding: 0 10px;
 	border-radius: var(--r-sm);
 	font-family: inherit;
-	font-size: 11.5px;
+	font-size: 12px;
 	font-weight: 600;
 	cursor: pointer;
 	transition:
@@ -4720,7 +4878,7 @@ button {
 }
 /* why Save is disabled, said where the eye already is */
 .vt-hint {
-	font-size: 11.5px;
+	font-size: 12px;
 }
 .vt-hint.is-error {
 	color: var(--red);
@@ -4741,7 +4899,7 @@ button {
 	gap: 8px;
 }
 .vt-totp-code {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	font-size: 13px;
 	font-weight: 700;
 	letter-spacing: 0.08em;
@@ -4787,7 +4945,8 @@ button {
 	color: var(--gray-900);
 }
 .save-bump {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-variant-numeric: tabular-nums;
+	font-family: var(--font-mono);
 	font-size: 11px;
 	font-weight: 600;
 	color: var(--gray-500);
@@ -4821,8 +4980,8 @@ button {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 11px;
-	color: var(--gray-400);
+	font-size: 12px;
+	color: var(--gray-500);
 }
 .share-popover {
 	width: 340px;
@@ -4832,7 +4991,7 @@ button {
 	gap: 9px;
 }
 .share-head {
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--gray-500);
 }
 .share-row {
@@ -4848,8 +5007,8 @@ button {
 	border: 1px solid var(--gray-200);
 	border-radius: var(--r-sm);
 	background: var(--gray-50);
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 11.5px;
+	font-family: var(--font-mono);
+	font-size: 12px;
 	color: var(--gray-700);
 	outline: none;
 }
@@ -4875,7 +5034,7 @@ button {
 	align-items: center;
 	gap: 6px;
 	min-width: 0;
-	font-size: 11.5px;
+	font-size: 12px;
 	line-height: 1.4;
 	color: var(--gray-600);
 }
@@ -4900,7 +5059,7 @@ button {
 	border-radius: var(--r-sm);
 	background: var(--white);
 	font-family: inherit;
-	font-size: 11.5px;
+	font-size: 12px;
 	font-weight: 600;
 	color: var(--gray-700);
 	cursor: pointer;
@@ -4969,11 +5128,12 @@ button {
 	gap: 8px;
 }
 .credits-row {
+	font-variant-numeric: tabular-nums;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--gray-600);
 }
 /* the metric (mm:ss, a step count) sits beside the credits it costs */
@@ -5061,7 +5221,7 @@ button {
 	border: none;
 	background: transparent;
 	font-family: inherit;
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: 600;
 	color: var(--gray-500);
 	cursor: pointer;
@@ -5078,7 +5238,7 @@ button {
 }
 .var-name em {
 	font-weight: 500;
-	color: var(--gray-400);
+	color: var(--gray-500);
 }
 .var-value-row {
 	display: flex;
@@ -5093,8 +5253,8 @@ button {
 	border-radius: var(--r-sm);
 	background: var(--white);
 	border: 1px solid var(--gray-200);
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 11.5px;
+	font-family: var(--font-mono);
+	font-size: 12px;
 	color: var(--gray-700);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -5115,7 +5275,7 @@ button {
 	padding-top: 2px;
 }
 .var-totp-code {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	font-size: 14px;
 	font-weight: 700;
 	letter-spacing: 0.12em;
@@ -5144,15 +5304,15 @@ button {
 	margin-top: 4px;
 	padding-top: 8px;
 	border-top: 1px dashed var(--gray-200);
-	font-size: 11.5px;
+	font-size: 12px;
 }
 .ctx-work .ctx-task,
 .ctx-work .ctx-reasoning {
 	margin-bottom: 0;
-	font-size: 11.5px;
+	font-size: 12px;
 }
 .ctx-work [data-slot='collapsible-trigger'] {
-	font-size: 11.5px;
+	font-size: 12px;
 }
 .ctx-work [data-slot='collapsible-content'] > div {
 	margin-top: 6px;
@@ -5165,7 +5325,7 @@ button {
 	margin-top: 6px;
 	max-height: 30vh;
 	overflow-y: auto;
-	font-size: 11.5px;
+	font-size: 12px;
 	line-height: 1.5;
 	color: var(--gray-700);
 }
@@ -5175,7 +5335,7 @@ button {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
-	font-size: 11.5px;
+	font-size: 12px;
 	line-height: 1.45;
 	color: var(--gray-600);
 	list-style: decimal;
@@ -5185,11 +5345,11 @@ button {
 	align-items: center;
 	gap: 7px;
 	min-width: 0;
-	font-size: 11px;
+	font-size: 12px;
 }
 .ctx-step-tool {
 	flex: 0 0 auto;
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	font-size: 10.5px;
 	font-weight: 600;
 	color: var(--gray-700);
@@ -5199,14 +5359,14 @@ button {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 10.5px;
+	font-size: 12px;
 	color: var(--gray-600);
 }
 .ctx-step-ms {
 	margin-left: auto;
 	flex: 0 0 auto;
 	font-size: 10px;
-	color: var(--gray-400);
+	color: var(--gray-500);
 	font-variant-numeric: tabular-nums;
 }
 
@@ -5337,7 +5497,7 @@ button {
 	border-radius: var(--r-sm);
 	background: var(--white);
 	overflow: hidden;
-	font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+	font-family: var(--font-mono);
 	font-size: 11.5px;
 	line-height: 17px;
 }
@@ -5352,7 +5512,7 @@ button {
 	padding: 8px 6px 8px 8px;
 	background: var(--gray-50, #f6f8fa);
 	border-right: 1px solid var(--gray-150);
-	color: var(--gray-400);
+	color: var(--gray-500);
 	font: inherit;
 	font-variant-numeric: tabular-nums;
 	overflow: hidden;
@@ -5392,7 +5552,7 @@ button {
 	caret-color: var(--gray-900);
 }
 .NodeCode-input::placeholder {
-	color: var(--gray-400);
+	color: var(--text-placeholder);
 }
 .NodeCode-input::selection {
 	background: rgba(10, 105, 218, 0.2);
@@ -5469,7 +5629,7 @@ button {
 .NodeBodyArea-label em {
 	font-style: normal;
 	font-weight: 500;
-	color: var(--gray-400);
+	color: var(--gray-500);
 }
 .NodeBodyArea-input {
 	flex: 1 1 auto;
@@ -5478,7 +5638,7 @@ button {
 	border: 1px solid var(--gray-200);
 	border-radius: var(--r-sm);
 	background: var(--white);
-	font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+	font-family: var(--font-mono);
 	font-size: 11.5px;
 	line-height: 16px;
 	color: var(--gray-900);
@@ -5511,6 +5671,7 @@ button {
 
 /* ---- While card ---- */
 .WhileNode-tally {
+	font-variant-numeric: tabular-nums;
 	flex: 0 0 auto;
 	font-size: 10.5px;
 	font-weight: 600;
@@ -5556,7 +5717,7 @@ button {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--gray-500);
 }
 .ScrollNode-link {
@@ -5571,64 +5732,6 @@ button {
 }
 .ScrollNode-link:hover {
 	background: color-mix(in srgb, var(--blue) 16%, transparent);
-}
-
-/* ---- "Ask AI to rework this card" ----------------------------------------
-   Hangs under the contextual toolbar, so it follows the card as the canvas
-   moves and goes away with the selection. */
-.ctxbar-refine {
-	position: absolute;
-	top: calc(100% + 6px);
-	left: 0;
-	display: flex;
-	align-items: flex-end;
-	gap: 6px;
-	width: 300px;
-	padding: 8px;
-	border-radius: var(--r-md);
-	background: var(--white);
-	box-shadow: 0 0 0 1px var(--gray-200), 0 8px 24px rgba(31, 35, 40, 0.14);
-	pointer-events: all;
-}
-.ctxbar-refine textarea {
-	flex: 1 1 auto;
-	min-width: 0;
-	padding: 6px 8px;
-	border: 1px solid var(--gray-200);
-	border-radius: var(--r-sm);
-	background: var(--white);
-	font: inherit;
-	font-size: 12px;
-	line-height: 1.4;
-	color: var(--gray-900);
-	resize: none;
-	outline: none;
-}
-.ctxbar-refine textarea:focus {
-	border-color: var(--blue);
-}
-.ctxbar-refine textarea::placeholder {
-	color: var(--gray-400);
-}
-.ctxbar-refine-send {
-	flex: 0 0 auto;
-	display: grid;
-	place-items: center;
-	width: 28px;
-	height: 28px;
-	border: 0;
-	border-radius: var(--r-sm);
-	background: var(--blue);
-	color: #fff;
-	cursor: pointer;
-}
-.ctxbar-refine-send:disabled {
-	background: var(--gray-200);
-	color: var(--gray-400);
-	cursor: default;
-}
-.ctxbar-refine-spin {
-	animation: spin 1.1s linear infinite;
 }
 
 /* ---- Inspector popup: draggable ------------------------------------------
@@ -5648,7 +5751,7 @@ button {
 .inspector-grip {
 	position: fixed;
 	/* one above agentation's popup (100001) */
-	z-index: 100002;
+	z-index: var(--z-above-agentation);
 	display: grid;
 	place-items: center;
 	border-radius: 5px;
@@ -5722,7 +5825,10 @@ button {
 	background: transparent;
 	color: var(--gray-500);
 	cursor: pointer;
-	transition: background 0.14s var(--ease-quick), color 0.14s var(--ease-quick);
+	transition:
+		background 0.14s var(--ease-quick),
+		color 0.14s var(--ease-quick),
+		scale 0.16s var(--ease);
 }
 .CardAction:hover {
 	background: var(--gray-100);
@@ -5747,12 +5853,20 @@ button {
 	position: absolute;
 	top: 0;
 	left: 0;
-	z-index: 45;
+	z-index: var(--z-float);
 	pointer-events: all;
 	border-radius: var(--r-lg, 12px);
 	background: var(--white);
 	box-shadow: 0 0 0 1px var(--gray-200), 0 12px 30px rgba(31, 35, 40, 0.16);
 	animation: pop-in 0.16s var(--ease);
+}
+/* It grows out of the corner that meets the card: placed with `translate`
+   (CardAiPopover.tsx), never `transform`, which the entrance owns. */
+.CardAiPopover[data-side='right'] {
+	transform-origin: 0 0;
+}
+.CardAiPopover[data-side='left'] {
+	transform-origin: 100% 0;
 }
 /* PromptInput's InputGroup brings its own border and rounding; the popover
    already supplies both, so the group would draw a second border inside the
@@ -5850,6 +5964,7 @@ button {
 }
 
 .CardPanel-thought {
+	font-variant-numeric: tabular-nums;
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
@@ -5928,7 +6043,7 @@ button {
 .CardPanel-timeout em {
 	flex: 0 0 auto;
 	font-style: normal;
-	font-size: 11.5px;
+	font-size: 12px;
 	font-weight: 500;
 	color: var(--gray-500);
 }
@@ -5976,16 +6091,13 @@ button {
 	border-color: var(--blue);
 }
 .NodeFieldRow-input::placeholder {
-	color: var(--gray-400);
+	color: var(--text-placeholder);
 }
 .NodeFieldRow > .Port {
 	top: 33px;
 }
 
 /* ---- Click ---- */
-.ClickNode-types .NodeSegmentedRow-option {
-	padding: 0 7px;
-}
 .ClickNode-arg {
 	display: inline-flex;
 	align-items: center;
@@ -5999,7 +6111,7 @@ button {
 }
 .ClickNode-arg em {
 	font-style: normal;
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--gray-500);
 }
 
@@ -6029,8 +6141,14 @@ button {
 	color: var(--gray-400);
 	cursor: default;
 }
+/* Overlaid in the field's top-right corner rather than laid out beside it.
+   In the flow it took 26px from every Else-If field even while invisible, so
+   the IF field and the ELSE IF fields below it never lined up. */
 .IfElseNode-drop {
-	flex: 0 0 auto;
+	position: absolute;
+	top: 12px;
+	right: 16px;
+	z-index: 1;
 	display: grid;
 	place-items: center;
 	width: 18px;
@@ -6038,13 +6156,32 @@ button {
 	border: 0;
 	border-radius: var(--r-sm);
 	background: transparent;
-	color: var(--gray-400);
+	color: var(--gray-500);
 	cursor: pointer;
 	opacity: 0;
 	transition: opacity 0.14s var(--ease-quick);
 }
-.IfElseNode-row:hover .IfElseNode-drop {
+/* the text never runs underneath it */
+.IfElseNode-row:has(.IfElseNode-drop) .NodeFieldRow-input {
+	padding-right: 26px;
+}
+.IfElseNode-row:has(.IfElseNode-drop) .IfElseNode-structured {
+	padding-right: 22px;
+}
+.IfElseNode-row:has(.IfElseNode-structured) .IfElseNode-drop {
+	top: 50%;
+	translate: 0 -50%;
+}
+/* Shown on hover, but also whenever it has keyboard focus, and always on a
+   touch screen, where there is no hover to reveal it. */
+.IfElseNode-row:hover .IfElseNode-drop,
+.IfElseNode-drop:focus-visible {
 	opacity: 1;
+}
+@media (hover: none) {
+	.IfElseNode-drop {
+		opacity: 1;
+	}
 }
 .IfElseNode-drop:hover {
 	background: color-mix(in srgb, var(--red) 12%, transparent);
@@ -6138,7 +6275,7 @@ button {
 	gap: 8px;
 }
 .ClickNode-arg-row .ClickNode-arg em {
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--gray-500);
 }
 
@@ -6153,7 +6290,7 @@ button {
 }
 .ver-head {
 	padding: 4px 6px 10px;
-	font-size: 11.5px;
+	font-size: 12px;
 	font-weight: 600;
 	color: var(--gray-500);
 }
@@ -6241,7 +6378,7 @@ button {
 	align-items: center;
 	gap: 6px;
 	min-width: 0;
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--gray-500);
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
@@ -6280,7 +6417,7 @@ button {
 	padding: 2px 7px;
 	border-radius: 999px;
 	background: rgba(31, 136, 61, 0.1);
-	color: var(--green);
+	color: var(--green-text);
 	font-size: 10.5px;
 	font-weight: 700;
 }
@@ -6318,4 +6455,67 @@ button {
 	font-size: 12.5px;
 	line-height: 1.5;
 	color: var(--gray-700);
+}
+
+/* ============================================================================
+   Reduced motion
+   Fewer and gentler, not none. Entrances keep their fade and lose their
+   travel, loops that only decorate stop, and anything that would glide across
+   the screen arrives without the journey. Spinners and the running-step dot
+   keep going: they are the only sign that work is in progress. (The shimmer,
+   the toolbar and the AI-building ring have their own rules beside their
+   definitions; Motion components branch on useReducedMotion; tldraw's camera
+   already goes instant on its own.)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+	/* Redefined in here, these replace the full versions wherever they run. */
+	@keyframes pop-in {
+		from {
+			opacity: 0;
+		}
+	}
+	@keyframes shot-in {
+		from {
+			opacity: 0;
+		}
+	}
+	@keyframes window-in {
+		from {
+			opacity: 0;
+		}
+	}
+	@keyframes inspect-bar-in {
+		from {
+			opacity: 0;
+		}
+	}
+	/* The recording dot blinks rather than throwing out a ring. */
+	@keyframes rec-pulse {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.6;
+		}
+	}
+	/* A running Run label is already green; the pulsing ring only decorates. */
+	.RunCursor_running {
+		animation: none;
+	}
+	/* The label hops to the next card instead of gliding there. */
+	.RunCursor[data-moving='false'] {
+		transition: none;
+	}
+	/* Wires the agent is drawing keep their dashes, standing still. */
+	.ConnectionShape.ConnectionShape_aiBuilding path {
+		animation: ai-wire-in 0.25s var(--ease);
+	}
+	/* A steady caret still says the file is being written. */
+	.code-output.is-writing .code-block::after {
+		animation: none;
+	}
+	.collapsed-indicator {
+		transition: none;
+	}
 }

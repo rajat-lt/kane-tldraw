@@ -76,8 +76,8 @@ export const LINK_SOURCES: {
 		label: 'Notion',
 		icon: StickyNote,
 		items: [
-			'Test strategy — Q3',
-			'Login flow · edge cases',
+			'Q3 test strategy',
+			'Login flow edge cases',
 			'Bug triage board',
 			'Release checklist template',
 		],

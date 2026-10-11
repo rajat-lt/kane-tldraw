@@ -246,7 +246,7 @@ export function CodegenIndicator({ progress }: { progress: number }) {
 				strokeLinecap="round"
 				strokeDasharray={`${c} ${c}`}
 				strokeDashoffset={c * (1 - shown)}
-				style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset .2s linear' }}
+				className="codegen-ring-arc"
 			/>
 		</svg>
 	)
