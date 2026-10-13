@@ -24,22 +24,31 @@ checks that the project builds.
 
 That is tldraw's license, not a choice in this repo. tldraw is free to use in a
 *Development Environment* — internal hosting not accessible to the public, such
-as `localhost`. A public site is a *Production Environment*, which needs a trial
-or commercial license; and tldraw 5.2.5 enforces it in code — on any `https`
+as `localhost`. A public site is a *Production Environment*, which needs a trial,
+hobby or commercial license; and tldraw 5.2.5 enforces it in code — on any `https`
 host that isn't `localhost` in a production build, with no key, it hides the
 editor five seconds after the page loads. The license also forbids working
 around that enforcement, so this repo doesn't.
 
 To put the site live:
 
-1. Get a tldraw license key (trial or commercial) — https://tldraw.dev, or
-   sales@tldraw.com.
+1. Get a tldraw license key (trial, hobby or commercial) — https://tldraw.dev,
+   or sales@tldraw.com.
 2. In this repo: **Settings → Secrets and variables → Actions → New repository
    secret**, name `TLDRAW_LICENSE_KEY`, paste the key.
 3. **Actions → Deploy to GitHub Pages → Run workflow.**
 
 The key reaches tldraw as `VITE_TLDRAW_LICENSE_KEY` at build time (see the
 `licenseKey` prop in `src/App.tsx`). It never belongs in the repo itself.
+
+The live site runs on a tldraw **hobby license** key, valid to 2027-10-12.
+A hobby key shows tldraw's “made with tldraw” watermark in the canvas's
+bottom-right corner, and tldraw's terms say it “must be shown on the canvas”.
+So Kane moves out of its way rather than covering it: the minimap sits above
+it, and in the split view the divider's grab area stops short of it (both in
+`src/index.css`). After the expiry date tldraw allows 30 days' grace, then
+hides the editor — and since the key is baked in at build time, a renewed key
+only takes effect once the workflow runs again.
 
 ## Why `package.json` overrides katex
 
@@ -1196,5 +1205,7 @@ is hidden; dismissing the toast tears the engine down. A stopped run gets no tra
 | Minimap / contextual toolbar / graph ops | `src/kane/KaneMinimap.tsx`, `src/kane/KaneContextualToolbar.tsx`, `src/kane/graphOps.ts` |
 | Styles (Kane tokens + tldraw overrides) | `src/index.css` |
 
-License note: template code is MIT; the `tldraw` dependency shows its “Made with tldraw”
-watermark unless a business license is added.
+License note: template code is MIT; the `tldraw` dependency has its own license (see
+“Live site”). With no key — on `localhost`, say — it shows a “Get a license for
+production” label in the canvas's corner; the live site's hobby key shows its “made with
+tldraw” watermark there; a trial key shows neither.

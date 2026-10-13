@@ -3,8 +3,8 @@ name: Deploy to GitHub Pages
 # This site is a tldraw app, and tldraw's license allows free use only in a
 # "Development Environment" — internal hosting that is not accessible to end
 # users, customers or the public. A public GitHub Pages site is a Production
-# Environment, which needs a trial or commercial license key; without one,
-# tldraw hides the editor five seconds after the page loads.
+# Environment, which needs a trial, hobby or commercial license key; without
+# one, tldraw hides the editor five seconds after the page loads.
 #
 # So this workflow always builds — that proves the project still compiles on a
 # clean machine — but it only publishes when the repository has a

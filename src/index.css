@@ -2089,6 +2089,15 @@ a {
 [data-kane-theme='dark'] .kane-minimap {
 	background: rgba(27, 32, 39, 0.8);
 }
+/* tldraw draws a watermark in this same corner — 100×36, inset 4px (or the
+   safe area) — on top of the minimap. Localhost has its unlicensed label, and
+   the live site's hobby license key shows "made with tldraw", which tldraw's
+   terms say "must be shown on the canvas". So the minimap sits 12px above it
+   rather than under it. A narrow canvas gets a 12px edge strip instead
+   (data-mobile), which the minimap's 16px inset already clears. */
+.tl-container:has(> .tl-watermark_SEE-LICENSE:not([data-mobile='true'])) .kane-minimap {
+	bottom: calc(max(var(--tl-space-2), env(safe-area-inset-bottom)) + 36px + 12px);
+}
 /* the squeezed split canvas hides the minimap and the toolbar */
 .kane-canvas-col.is-split .kane-minimap {
 	display: none;
@@ -3307,6 +3316,13 @@ a {
 	width: 9px;
 	height: 100%;
 	cursor: ew-resize;
+}
+/* The split canvas is at most 420px wide, so tldraw's watermark is a 12×52
+   strip on its right edge, 4–56px up from the bottom — under this grab area,
+   which would take the pointer from it. The grab area stops 4px above it. */
+.kane-canvas-col:has(.tl-watermark_SEE-LICENSE[data-mobile='true']) + .separator .separator-hit {
+	height: auto;
+	bottom: 60px;
 }
 .separator-glow {
 	position: absolute;
